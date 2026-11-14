@@ -1,30 +1,59 @@
+# FinPilot · 可解释财富管理智能体
 
-## 运行
+## 当前功能
 
-需要 Python 3.11+：
+- **记账与纠错**：文字提取、手动录入、CSV 预览校正、重复识别、原 ID 编辑与并发保护。
+- **收支分析**：月／年／自定义区间、趋势、分类、同期对比、筛选小计，选定区间可以带入助手。
+- **资金规划**：从账本现金流核对生活开销、还款、应急金和目标预留；目标独立记录，进度可撤销，期限追问只读测算。
+- **财富总览**：8 类资产、3 类负债，记录估值日期与即时可用金额；扣除预留和近期还款，缺项保持待核对；与个人账本应急目标对照。
+- **看懂方案**：点击解释风险、流动性、净值、回撤和费用；假设涨跌与费用用整数分确定性计算，不触发投资。
+- **投资研究**：历史自选、行情、组合与报告；异常 OHLC 数据隔离，报告使用可归因事实。
+- **模拟银行**：转账、申购、赎回，经参数确认、TOTP、去重和回执核对后执行。
+- **模型与反馈**：Qwen3-4B + LoRA；用户同意、结构化修正、人工审核、离线评估、发布与回滚。
 
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install -r requirements.txt
-python run.py --demo
-```
-
-打开 `http://127.0.0.1:8010`，选择记账或投资。演示账单、股票、组合与资讯样例日期为 **2026-11-15**；原始行情保存在 `historical-data/`，不加 `--demo` 即可查看。记账数据分别保存到 `.runtime/` 下的独立目录。
-
-自然语言入账、票据识别和研究报告需要配置本地模型：
-
-```bash
-python -m pip install -r requirements-model.txt
-python run.py --demo --model-dir /path/to/local/model
-```
-
-票据识别需要视觉模型。页面样式、字体及部分脚本使用外部 CDN。
+这是单用户比赛原型，银行本金与操作均为模拟；历史行情不代表实时市场。当前未启用 OCR，没有接入真实银行或证券交易。模型和测试数据以合成为主，结果不是通用能力或真实收益的证明。
 
 ## 目录
 
-- `AI_accounting_agent/backend/`：记账与投资服务。
-- `AI_accounting_agent/frontend/`：原版记账、投资页面。
-- `demo-data/`：2026-11-15 合成演示数据。
-- `historical-data/`：原始历史行情、资讯及组合快照。
-- `run.py`：统一启动入口。
+| 路径 | 内容 |
+|---|---|
+| [AI_accounting_agent/frontend/liquid-glass/](AI_accounting_agent/frontend/liquid-glass) | 当前使用的网页、样式、导航和图表 |
+| [AI_accounting_agent/backend/](AI_accounting_agent/backend) | 记账、投研、资金规划、银行模拟与反馈后端 |
+| [run.py](run.py)、[scripts/](scripts) | 启动、同源代理、数据合成、训练、评估与发布工具 |
+| [artifacts/finance-v4/](artifacts/finance-v4) | 当前 LoRA 权重、分词器、训练／验证／测试语料与评估 |
+| [artifacts/accounting-v2/](artifacts/accounting-v2) | 基础记账合成语料 |
+| [tests/](tests) | 后端、前端及隔离浏览器验收 |
+| [docs/competition/](docs/competition) | 技术文档、演示脚本、安全自评、提交核对 |
+| [materials/](materials) | PPT、PDF、文档压缩包、发布验证与文件清单 |
+| [vendor/mosaic_guard/](vendor/mosaic_guard) | 保留原归属与 MIT 许可的操作安全内核 |
+| [THIRD_PARTY/](THIRD_PARTY) | 基座模型许可 |
+
+仓库沿用当前应用的源码路径，避免整理目录改变导入、资源和启动逻辑。旧页面目录仅保留对齐测试需要的原始问题素材，当前网站入口在 `frontend/liquid-glass/`。
+
+## 本机体验与部署
+
+需要 Python 3.11+。基础体验不需要 Node 构建、GPU 或模型下载：
+
+```bash
+git clone https://github.com/gr-peng/gonghang.git
+cd gonghang
+python run.py --demo
+```
+
+启动器创建虚拟环境、安装核心依赖，启动独立演示账本、两个后端及同源网页代理。**在运行代码的这台电脑上**打开 `http://localhost:5500`。如果代码运行在远程服务器，浏览器必须使用该服务器配置的受控入口，不能把服务器的 localhost 当成本机地址。
+
+基础模式默认关闭 AI，保留可手动操作的功能。要启用当前微调模型，参见[本地模型部署、评估与发布](docs/competition/DEPLOYMENT.md#本地微调模型)。仓库包含 finance-v4 适配器，Qwen3-4B 基座需另行获取；运行配置由 `.env.example` 复制后在自己的环境填写。
+
+## 验证
+
+整理发布前，在本仓库目录再次运行后端回归、前端检查与隔离启动检查；本版 129 项后端回归与 3 套前端检查通过；新增浏览器流程与 20 页 × 3 种宽度检查见 [materials/PUBLISH-VALIDATION.json](materials/PUBLISH-VALIDATION.json)。此前线上对应版本的完整验收记录见 [VALIDATION.json](VALIDATION.json)：104 项应用回归、11 组评审浏览器流程、11 组银行浏览器流程，以及 19 页 × 3 种宽度布局检查。
+
+```bash
+python -m pip install -r AI_accounting_agent/backend/requirements-core.txt -r tests/requirements.txt
+python -m pytest -q tests/test_backend.py tests/test_accounting_v2.py tests/test_upstream_data.py tests/test_remote_access.py tests/test_finance_workspace.py tests/test_bank_import.py tests/test_learning_loop.py tests/test_model_release.py tests/test_finance_planning.py tests/test_judge_fixes.py tests/test_wealth.py
+node tests/navigation.test.mjs
+node tests/chart_geometry.test.mjs
+node tests/visuals.test.mjs
+```
+
+浏览器资金流程须在隔离账本运行；历史真实模型验收与本次发布检查分别记录。当前模型的合成开发留出结果为记账 174/174、银行意图 76/79、画像依据 64/64；本次整理未重新训练。

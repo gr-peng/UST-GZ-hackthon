@@ -1,4 +1,0 @@
-{"event_date": "2026-11-15", "category": "收入", "type": "income", "amount": 5000, "currency": "CNY", "description": "工资示例", "source": "demo", "metadata": {"data_kind": "synthetic_demo", "scenario_date": "2026-11-15"}}
-{"event_date": "2026-11-15", "category": "餐饮", "type": "expense", "amount": 28, "currency": "CNY", "description": "午餐示例", "source": "demo", "metadata": {"data_kind": "synthetic_demo", "scenario_date": "2026-11-15"}}
-{"event_date": "2026-11-15", "category": "出行", "type": "expense", "amount": 6, "currency": "CNY", "description": "地铁示例", "source": "demo", "metadata": {"data_kind": "synthetic_demo", "scenario_date": "2026-11-15"}}
-{"event_date": "2026-11-15", "category": "购物", "type": "expense", "amount": 89, "currency": "CNY", "description": "生活用品示例", "source": "demo", "metadata": {"data_kind": "synthetic_demo", "scenario_date": "2026-11-15"}}

@@ -1,129 +1,169 @@
-"""Serve the original accounting and investment modules from one origin."""
-
+#!/usr/bin/env python3
+"""Start both original FastAPI services and the integrated mobile frontend."""
 import argparse
-import importlib.util
 import json
 import os
 from pathlib import Path
-import shutil
+import socket
+import subprocess
 import sys
+import time
+from urllib.request import urlopen
+import venv
+import webbrowser
 
 ROOT = Path(__file__).resolve().parent
-SCENARIO_DATE = "2026-11-15"
+BACKEND = ROOT / 'AI_accounting_agent' / 'backend'
 
 
-def _load_module(name, path):
-    spec = importlib.util.spec_from_file_location(name, path)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[name] = module
-    spec.loader.exec_module(module)
-    return module
-
-
-def create_app(*, data_dir=None, model_dir=None, demo=False):
-    from fastapi.responses import HTMLResponse, Response
-    from fastapi.staticfiles import StaticFiles
-
-    ledger_dir = Path(data_dir).resolve() if data_dir else ROOT / ".runtime" / (
-        "demo-bookkeeper-20261115" if demo else "bookkeeper"
-    )
-    ledger_dir.mkdir(parents=True, exist_ok=True)
-    os.environ["AI_BOOKKEEPER_DATA_DIR"] = str(ledger_dir)
-    os.environ.pop("AI_BOOKKEEPER_JSONL_PATH", None)
-    if demo:
-        fixture = ledger_dir / "synthetic_bank_bills.jsonl"
-        if not fixture.exists():
-            shutil.copyfile(ROOT / "demo-data" / fixture.name, fixture)
-        os.environ["AI_BOOKKEEPER_JSONL_PATH"] = str(fixture)
-    if model_dir is not None:
-        os.environ["QWEN_MODEL_DIR"] = str(Path(model_dir).resolve())
-
-    backend = ROOT / "AI_accounting_agent" / "backend"
-    sys.path.insert(0, str(backend))
-    accounting = _load_module("accounting_backend", backend / "app.py")
-    if demo:
-        accounting._import_jsonl_if_needed()
-    os.environ["AI_TRADER_DATA_DIR"] = str(
-        ROOT / ("demo-data" if demo else "historical-data")
-    )
-    investment = _load_module("investment_backend", backend / "investment_app.py")
-    application = accounting.app
-    context = {
-        "mode": "demo" if demo else "historical",
-        "data_kind": "synthetic_demo" if demo else "historical_archive",
-        "scenario_date": SCENARIO_DATE if demo else None,
-    }
-
-    @application.get("/app-config", include_in_schema=False)
-    def app_config():
-        return context
-
-    @application.get("/app-context.js", include_in_schema=False)
-    def app_context():
-        label = f"演示数据 · {SCENARIO_DATE}" if demo else "历史行情"
-        script = """document.addEventListener('DOMContentLoaded', () => {
-const bar = document.createElement('nav');
-bar.style.cssText = 'height:36px;display:flex;align-items:center;justify-content:center;gap:18px;background:#f1f5f9;color:#334155;font:13px sans-serif;position:relative;z-index:1000;flex-shrink:0';
-for (const [title, href] of [['记账', '/accounting/welcome/code.html'], ['投资', '/investment/welcome/code.html']]) {
-  const a = document.createElement('a'); a.textContent = title; a.href = href; bar.appendChild(a);
-}
-const caption = document.createElement('span'); caption.textContent = LABEL; bar.appendChild(caption);
-document.body.prepend(bar);
-});""".replace("LABEL", json.dumps(label, ensure_ascii=False))
-        return Response(script, media_type="application/javascript")
-
-    @application.get("/", include_in_schema=False)
-    def home():
-        label = f"演示数据 · {SCENARIO_DATE}" if demo else "原始历史数据"
-        return HTMLResponse(
-            '<!doctype html><html lang="zh-CN"><meta charset="utf-8">'
-            '<meta name="viewport" content="width=device-width,initial-scale=1">'
-            '<title>AI 记账与投资助手</title><body style="font-family:sans-serif;'
-            'max-width:480px;margin:12vh auto;padding:24px;background:#f8fafc">'
-            '<h1>AI 记账与投资助手</h1><p>' + label + '</p>'
-            '<p><a href="/accounting/welcome/code.html">打开记账</a></p>'
-            '<p><a href="/investment/welcome/code.html">打开投资</a></p></body></html>'
-        )
-
-    if demo:
-        def demo_chart():
-            svg = (
-                '<svg xmlns="http://www.w3.org/2000/svg" width="640" height="240" viewBox="0 0 640 240">'
-                '<rect width="640" height="240" fill="#f8fafc"/>'
-                '<path d="M55 35V185H605" fill="none" stroke="#94a3b8"/>'
-                '<circle cx="330" cy="100" r="7" fill="#6366f1"/>'
-                '<text x="330" y="70" text-anchor="middle" font-size="20">1.00</text>'
-                '<text x="330" y="215" text-anchor="middle" font-size="16">2026-11-15</text>'
-                '<text x="65" y="28" font-size="16">演示净值</text></svg>'
-            )
-            return Response(svg, media_type="image/svg+xml")
-        for filename in ["FinAgent_vs_SSE100_Month_11.png", "FinAgent_vs_SSE100_Quarter.png", "FinAgent_vs_SSE100_Year.png"]:
-            application.add_api_route(
-                "/investment/visual/" + filename, demo_chart,
-                methods=["GET"], include_in_schema=False,
-            )
-
-    application.mount("/invest-api", investment.app, name="investment-api")
-    frontend = ROOT / "AI_accounting_agent" / "frontend"
-    application.mount("/accounting", StaticFiles(directory=frontend / "accounting"), name="accounting")
-    application.mount("/investment", StaticFiles(directory=frontend / "investment"), name="investment")
-    return application
+def read_env():
+    path = ROOT / '.env'
+    if path.exists():
+        for line in path.read_text(encoding='utf-8-sig').splitlines():
+            line = line.strip()
+            if not line or line.startswith('#') or '=' not in line:
+                continue
+            key, value = line.split('=', 1)
+            value = value.strip().strip('"').strip("'")
+            if value:
+                os.environ.setdefault(key.strip(), value)
 
 
 def main():
-    parser = argparse.ArgumentParser(description="AI 记账与投资助手")
-    parser.add_argument("--host", default="127.0.0.1")
-    parser.add_argument("--port", type=int, default=8010)
-    parser.add_argument("--data-dir", help="独立记账数据库目录")
-    parser.add_argument("--model-dir", help="本地模型目录，也可设置 QWEN_MODEL_DIR")
-    parser.add_argument("--demo", action="store_true", help="使用 2026-11-15 的合成演示数据")
+    parser = argparse.ArgumentParser(description='FinPilot / FinTechathon 一键启动')
+    parser.add_argument('--no-install', action='store_true', help='使用当前 Python 中已安装的依赖')
+    parser.add_argument('--no-browser', action='store_true')
+    parser.add_argument('--host', default='127.0.0.1', help='监听地址；局域网演示可设为 0.0.0.0')
+    parser.add_argument('--demo', action='store_true', help='使用独立示例账本，不写入正式账本')
     args = parser.parse_args()
-    import uvicorn
-    uvicorn.run(
-        create_app(data_dir=args.data_dir, model_dir=args.model_dir, demo=args.demo),
-        host=args.host, port=args.port,
-    )
+    if sys.version_info < (3, 11):
+        raise SystemExit('需要 Python 3.11 或更新版本，推荐 Python 3.11 / 3.12。')
+    read_env()
+    if not args.no_install:
+        env_dir = ROOT / '.venv'
+        python = env_dir / ('Scripts/python.exe' if os.name == 'nt' else 'bin/python')
+        marker = env_dir / '.core-requirements'
+        requirements = BACKEND / 'requirements-core.txt'
+        if not python.exists():
+            print('正在创建 Python 虚拟环境…', flush=True)
+            venv.EnvBuilder(with_pip=True).create(env_dir)
+        if not marker.exists() or marker.read_text() != requirements.read_text():
+            print('首次运行：安装基础依赖（无需 Node.js 或 GPU）…', flush=True)
+            subprocess.run([str(python), '-m', 'pip', 'install', '-r', str(requirements)], check=True)
+            marker.write_text(requirements.read_text())
+        child = subprocess.Popen([str(python), str(Path(__file__).resolve()), '--no-install', *sys.argv[1:]], cwd=ROOT)
+        try:
+            return child.wait()
+        except KeyboardInterrupt:
+            # Console Ctrl+C reaches both parent and child; let the child close services.
+            try:
+                child.wait(timeout=15)
+            except subprocess.TimeoutExpired:
+                child.terminate()
+                child.wait()
+            return 0
+    try:
+        import fastapi, uvicorn, multipart  # noqa: F401
+    except ImportError as exc:
+        raise SystemExit('依赖未安装。请运行 python run.py 自动安装，或安装 requirements-core.txt。') from exc
+    book_port = int(os.getenv('BOOKKEEPER_PORT', '8010'))
+    trader_port = int(os.getenv('TRADER_PORT', '8020'))
+    frontend_port = int(os.getenv('FRONTEND_PORT', '5500'))
+    ports = [book_port, trader_port, frontend_port]
+    managed_model = os.getenv('ACCOUNTING_MODEL_SERVER', '').lower() in {'1', 'true', 'yes'}
+    model_port = int(os.getenv('ACCOUNTING_MODEL_PORT', '28030'))
+    if managed_model:
+        ports.append(model_port)
+    for port in ports:
+        try:
+            with socket.socket() as sock:
+                # Match uvicorn/http.server: recently closed connections must not
+                # be mistaken for a running listener during a managed restart.
+                sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                sock.bind((args.host, port))
+        except OSError:
+            raise SystemExit(f'端口 {port} 已被占用。请关闭旧服务后重试；启动器不会终止其他进程。')
+    runtime = ROOT / '.runtime'
+    runtime.mkdir(exist_ok=True)
+    (runtime/'launcher.pid').write_text(str(os.getpid())+'\n')
+    env = {**os.environ, 'PYTHONUNBUFFERED':'1', 'PYTHONUTF8':'1'}
+    book_env = {**env, 'QWEN_MODEL_DIR': os.getenv('BOOKKEEPER_MODEL_DIR', os.getenv('QWEN_MODEL_DIR', ''))}
+    trader_env = {**env, 'QWEN_MODEL_DIR': os.getenv('TRADER_MODEL_DIR', os.getenv('QWEN_MODEL_DIR', ''))}
+    # Independent book databases must not hide the packaged investment data files.
+    trader_env['AI_BOOKKEEPER_DATA_DIR'] = os.getenv('AI_TRADER_DATA_DIR', str(BACKEND / 'data'))
+    if args.demo:
+        book_env['AI_BOOKKEEPER_DATA_DIR'] = str(runtime / 'demo-bookkeeper')
+        book_env.pop('AI_BOOKKEEPER_JSONL_PATH', None)
+    commands = [
+        ('bookkeeper', [sys.executable, '-m', 'uvicorn', 'app:app', '--host', args.host, '--port', str(book_port)], BACKEND, book_env),
+        ('investment', [sys.executable, '-m', 'uvicorn', 'investment_app:app', '--host', args.host, '--port', str(trader_port)], BACKEND, trader_env),
+        ('frontend', [sys.executable, str(ROOT / 'scripts' / 'serve_frontend.py'), '--host', args.host, *(['--demo'] if args.demo else [])], ROOT, env),
+    ]
+    if managed_model:
+        model_python = os.getenv('ACCOUNTING_MODEL_PYTHON', str(BACKEND / '.venv/bin/python'))
+        model_env = {**env, 'CUDA_VISIBLE_DEVICES': os.getenv('ACCOUNTING_MODEL_GPU', '2'),
+                     'PYTHONPATH': str(ROOT / '.runtime/ml-deps'), 'HF_HUB_OFFLINE': '1',
+                     'TOKENIZERS_PARALLELISM': 'false'}
+        commands.insert(0, ('model', [model_python, '-m', 'uvicorn', 'scripts.serve_accounting_model:app',
+                                    '--host', '127.0.0.1', '--port', str(model_port)], ROOT, model_env))
+    children = []
+    logs = []
+    try:
+        for name, command, cwd, child_env in commands:
+            log = (runtime / f'{name}.log').open('w', encoding='utf-8')
+            logs.append(log)
+            children.append(subprocess.Popen(command, cwd=cwd, env=child_env, stdout=log, stderr=subprocess.STDOUT))
+        for _ in range(600 if managed_model else 80):
+            if any(p.poll() is not None for p in children):
+                raise RuntimeError('服务提前退出。请查看 .runtime 中的日志。')
+            try:
+                with urlopen(f'http://127.0.0.1:{book_port}/health', timeout=1) as r:
+                    assert json.load(r)['status'] == 'ok'
+                with urlopen(f'http://127.0.0.1:{trader_port}/health', timeout=1) as r:
+                    assert json.load(r)['status'] == 'ok'
+                with urlopen(f'http://127.0.0.1:{frontend_port}/', timeout=1) as r:
+                    assert r.status == 200
+                if managed_model:
+                    with urlopen(f'http://127.0.0.1:{model_port}/health', timeout=1) as r:
+                        assert json.load(r)['loaded'] is True
+                break
+            except Exception:
+                time.sleep(.25)
+        else:
+            raise RuntimeError('服务启动超时，请查看 .runtime 中的日志。')
+        if args.demo:
+            subprocess.run([sys.executable, str(ROOT / 'scripts' / 'seed_demo.py')], check=True, env=env)
+        print(f'\nFinPilot已启动：http://localhost:{frontend_port}', flush=True)
+        print(f'记账 API：http://localhost:{book_port}/docs\n投研 API：http://localhost:{trader_port}/docs', flush=True)
+        print('按 Ctrl+C 同时关闭三个服务。日志位于 .runtime/。', flush=True)
+        if not args.no_browser:
+            webbrowser.open(f'http://localhost:{frontend_port}')
+        while all(p.poll() is None for p in children):
+            time.sleep(.5)
+        raise RuntimeError('一个服务已停止，其他服务将一并关闭。请查看 .runtime 日志。')
+    except KeyboardInterrupt:
+        print('\n正在关闭服务…', flush=True)
+    finally:
+        for p in children:
+            if p.poll() is None:
+                p.terminate()
+        for p in children:
+            try:
+                p.wait(timeout=8)
+            except subprocess.TimeoutExpired:
+                p.kill()
+                p.wait()
+        for log in logs:
+            log.close()
+    return 0
 
 
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    try:
+        raise SystemExit(main())
+    except KeyboardInterrupt:
+        print('\n启动已取消。')
+        raise SystemExit(0)
+    except (RuntimeError, subprocess.CalledProcessError) as exc:
+        print(f'启动失败：{exc}', file=sys.stderr)
+        raise SystemExit(1)

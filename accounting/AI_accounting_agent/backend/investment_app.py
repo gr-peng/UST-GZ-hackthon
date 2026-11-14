@@ -1,25 +1,23 @@
+from __future__ import annotations
 import csv
 import json
 import os
 import re
 import uvicorn
 from collections import deque
+from datetime import datetime
+from zoneinfo import ZoneInfo
 from pathlib import Path
 from typing import Deque, Dict, List, Optional
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-try:
-    import torch
-    from transformers import AutoModelForCausalLM, AutoTokenizer
-except ImportError:
-    torch = None
-    AutoModelForCausalLM = None
-    AutoTokenizer = None
+from llm_runtime import model_status, api_chat, provider
+from research_quality import valid_quote, quote_quality, stock_facts, grounded_report
 
 # Configuration
 MODEL_DIR = os.environ.get("QWEN_MODEL_DIR")
-DATA_DIR = Path(os.environ.get("AI_TRADER_DATA_DIR", Path(__file__).resolve().parent / "data"))
+DATA_DIR = Path(os.environ.get("AI_BOOKKEEPER_DATA_DIR", Path(__file__).resolve().parent / "data"))
 PORTFOLIO_PATH = DATA_DIR / "portfolio_snapshot.json"
 A10_KLINE_DIR = DATA_DIR / "Financial" / "A10"
 REPORTS_DIR = DATA_DIR / "Financial" / "reports"
@@ -100,8 +98,6 @@ def _format_portfolio_payload(raw: dict) -> dict:
     }
 
     return {
-        "data_kind": raw.get("data_kind", "historical_archive"),
-        "scenario_date": raw.get("scenario_date"),
         "summary": summary,
         "holdings": holdings,
         "allocation": allocation,
@@ -118,7 +114,9 @@ def _read_kline_records(csv_path: Path, limit: int) -> List[Dict[str, str]]:
     with open(csv_path, "r", encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
         for row in reader:
-            buffer.append({key: row.get(key) for key in reader.fieldnames})
+            normalized = {(key.strip() or "date"): row.get(key) for key in reader.fieldnames}
+            if valid_quote(normalized):
+                buffer.append(normalized)
     return list(buffer)
 
 # App Setup
@@ -135,19 +133,21 @@ app.add_middleware(
 # Global Model Variables
 tokenizer = None
 model = None
-device = "cuda" if torch is not None and torch.cuda.is_available() else "cpu"
+device = "not_loaded"
 
 def load_model_if_needed():
-    global tokenizer, model
+    global tokenizer, model, torch, device
     if tokenizer is not None and model is not None:
         return
     
     if not MODEL_DIR:
-        raise HTTPException(status_code=503, detail="请通过 --model-dir 配置本地模型。")
-    if torch is None or AutoModelForCausalLM is None or AutoTokenizer is None:
-        raise HTTPException(status_code=503, detail="请先安装 requirements-model.txt 中的模型依赖。")
-    if not (Path(MODEL_DIR) / "config.json").is_file():
-        raise HTTPException(status_code=503, detail="本地模型目录缺少 config.json。")
+        raise HTTPException(status_code=503, detail="尚未配置本地模型")
+    try:
+        import torch
+        from transformers import AutoModelForCausalLM, AutoTokenizer
+    except ImportError as exc:
+        raise HTTPException(status_code=503, detail="请安装 requirements-local.txt") from exc
+    device = "cuda" if torch.cuda.is_available() else "cpu"
 
     print(f"Loading model from {MODEL_DIR}...")
     tokenizer = AutoTokenizer.from_pretrained(MODEL_DIR, trust_remote_code=True)
@@ -206,7 +206,7 @@ def _sanitize_reply(text: str) -> str:
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "service": "investment-agent"}
+    return {"status": "ok", "service": "investment-agent", "llm": model_status(MODEL_DIR)}
 
 @app.get("/trader/portfolio")
 def get_portfolio():
@@ -215,14 +215,18 @@ def get_portfolio():
 
 @app.post("/chat", response_model=ChatResponse)
 def chat(req: ChatRequest):
-    load_model_if_needed()
-    
     system_prompt = req.system_prompt or "You are a helpful financial investment assistant."
+    system_prompt += (f"\n当前日期为 {datetime.now(ZoneInfo('Asia/Shanghai')).date()}（Asia/Shanghai）。"
+                      "只依据提供的数据回答，注明历史数据日期，不能将历史快照说成实时行情；不得臆测另一个今天的日期。")
     
     messages = [{"role": "system", "content": system_prompt}]
     for m in req.messages:
         messages.append({"role": m.role, "content": m.content})
         
+    if provider(MODEL_DIR) != "local":
+        return ChatResponse(reply=_sanitize_reply(api_chat(messages, req.max_new_tokens, req.temperature, req.top_p)))
+    load_model_if_needed()
+
     input_ids = tokenizer.apply_chat_template(
         messages,
         add_generation_prompt=True,
@@ -242,51 +246,55 @@ def chat(req: ChatRequest):
     reply = tokenizer.decode(new_tokens, skip_special_tokens=True)
     return ChatResponse(reply=_sanitize_reply(reply))
 
+def _grounded(sections):
+    def generate(catalog):
+        try:
+            return api_chat([{'role': 'system', 'content': '从提供的事实索引中为每章选择1至3个ID。只返回JSON：章名到ID数组。不得写新事实。'},
+                             {'role': 'user', 'content': json.dumps(catalog, ensure_ascii=False)}], 384, 0, 1)
+        except HTTPException as exc:
+            raise RuntimeError('Model unavailable') from exc
+    return grounded_report(sections, generate)
+
+
 @app.post("/trader/analyst/report")
 def generate_analyst_report():
-    if not PORTFOLIO_PATH.exists():
-        raise HTTPException(status_code=404, detail="Portfolio data not found")
-    
-    with open(PORTFOLIO_PATH, "r", encoding="utf-8") as f:
-        portfolio = json.load(f)
-        
-    prompt = f"""
-    You are a professional financial analyst agent. 
-    Based on the following portfolio snapshot, please write a comprehensive daily analysis report.
-    
-    Portfolio Data:
-    {json.dumps(portfolio, indent=2, ensure_ascii=False)}
-    
-    Report Structure:
-    1. **Market & Portfolio Overview**: Summary of total balance, daily change, and YTD return.
-    2. **Performance Drivers**: Analyze top gainers and losers.
-    3. **Risk & Allocation**: Comment on sector allocation and concentration.
-    
-    
-    Format the output in clean Markdown.
-    """
-    
-    req = ChatRequest(
-        messages=[{"role": "user", "content": prompt}],
-        system_prompt="You are an expert financial analyst.",
-        max_new_tokens=1500
-    )
-    
-    return chat(req)
+    p = _format_portfolio_payload(_load_portfolio_snapshot())
+    s = p['summary']
+    return _grounded({
+        '历史组合': [f"快照日期：{s['last_update']}；组合市值 {s['total_balance']:,.2f} 元。",
+                     f"快照记录的当日变动 {s['day_change_pct']:+.2f}%，年初至今变动 {s['ytd_return_pct']:+.2f}%。"],
+        '主要持仓': [f"{h['name']}：配置占比 {h['weight']*100:.2f}%，快照盈亏 {h['pnl_pct']:+.2f}%。" for h in p['holdings'][:3]] or ['无持仓记录。'],
+        '数据边界': ['历史组合不属于当前模拟账户，也不计入账本可用资金。',
+                    '缺少实时价格和完整绩效基准，不能据此推断当前收益或未来表现。']})
+
+
+@app.get("/trader/stock/{stock_code}/quality")
+def get_stock_quality(stock_code: str):
+    if stock_code not in STOCK_METADATA:
+        raise HTTPException(status_code=404, detail="此股票尚未接入历史行情")
+    path = A10_KLINE_DIR / f"{stock_code}.csv"
+    rows = []
+    if path.exists():
+        with path.open(encoding='utf-8-sig') as f:
+            reader = csv.DictReader(f)
+            rows = [{(k.strip() or 'date'): v for k, v in row.items()} for row in reader]
+    return quote_quality(rows)
 
 
 @app.get("/trader/watchlist")
 def get_watchlist():
     """Return A10 stock watchlist with metadata"""
     return [
-        {"code": code, "name": name} 
+        {"code": code, "name": name, "quality": get_stock_quality(code)} 
         for code, name in STOCK_METADATA.items()
     ]
 
 
 @app.get("/trader/stock/{stock_code}/kline")
-def get_stock_kline(stock_code: str, days: int = 10):
+def get_stock_kline(stock_code: str, days: int = Query(10, ge=1, le=365)):
     """Get recent K-line data for a stock"""
+    if stock_code not in STOCK_METADATA:
+        raise HTTPException(status_code=404, detail="此股票尚未接入历史行情")
     csv_path = A10_KLINE_DIR / f"{stock_code}.csv"
     if not csv_path.exists():
         raise HTTPException(status_code=404, detail=f"K-line data not found for {stock_code}")
@@ -298,6 +306,8 @@ def get_stock_kline(stock_code: str, days: int = 10):
 @app.get("/trader/stock/{stock_code}/news")
 def get_stock_news(stock_code: str):
     """Get news and research reports for a stock"""
+    if stock_code not in STOCK_METADATA:
+        raise HTTPException(status_code=404, detail="此股票尚未接入资讯")
     report_path = REPORTS_DIR / f"{stock_code}_news_report.json"
     if not report_path.exists():
         raise HTTPException(status_code=404, detail=f"News/report data not found for {stock_code}")
@@ -319,6 +329,9 @@ def get_stock_news(stock_code: str):
 def generate_stock_daily_report(stock_code: str):
     """Generate daily analysis report for a specific stock"""
     
+    if stock_code not in STOCK_METADATA:
+        raise HTTPException(status_code=404, detail="此股票尚未接入研究数据")
+
     # Load K-line data
     try:
         kline_data = get_stock_kline(stock_code, days=10)
@@ -331,50 +344,14 @@ def generate_stock_daily_report(stock_code: str):
     except HTTPException:
         news_data = {"news": [], "reports": []}
     
-    stock_name = STOCK_METADATA.get(stock_code, stock_code)
-    
-    # Build context
-    kline_summary = f"Recent 10-day K-line data (latest first):\n"
-    if kline_data:
-        for i, row in enumerate(kline_data[-5:]):  # Last 5 days
-            kline_summary += f"- {row.get('date')}: Open {row.get('open')}, High {row.get('high')}, Low {row.get('low')}, Close {row.get('close')}, Volume {row.get('volume')}\n"
-    
-    news_summary = "Recent News:\n"
-    for item in news_data.get("news", [])[:3]:
-        news_summary += f"- [{item.get('发布时间')}] {item.get('新闻标题')}\n"
-    
-    reports_summary = "Research Reports:\n"
-    for report in news_data.get("reports", [])[:2]:
-        reports_summary += f"- {report.get('报告名称')} ({report.get('机构')}, {report.get('东财评级')})\n"
-    
-    prompt = f"""
-你是一名资深证券研究员，需要用中文输出一份结构化的个股研究日报，禁止透露任何思考过程或中间推理，只展示最终结论。
-
-基础数据：
-{kline_summary}
-
-最新新闻：
-{news_summary}
-
-最新研报：
-{reports_summary}
-
-    撰写要求：
-    1. 仅输出“**基本面分析**”“**社会舆情**”“**风险提示**”三个章节，每个章节另起一段，并给出2-3条要点，禁止包含“投资意见”或其他章节。
-    2. 所有结论都需引用上述数据或事实，不可凭空臆测。
-    3. 全文控制在400字以内，保持专业、凝练的中文表述，并确保章节标题前后各留一行空行。
-"""
-
-    req = ChatRequest(
-        messages=[{"role": "user", "content": prompt}],
-        system_prompt="你是资深证券分析师，只输出中文正式报告，不得展现思考过程。",
-        max_new_tokens=800,
-        temperature=0.6
-    )
-    
-    return chat(req)
+    quality = get_stock_quality(stock_code)
+    result = _grounded(stock_facts(STOCK_METADATA[stock_code], kline_data,
+                                  news_data['news'], news_data['reports'], quality))
+    result['quality'] = quality
+    return result
 
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "8020"))
     uvicorn.run("investment_app:app", host="0.0.0.0", port=port, reload=False)
+
