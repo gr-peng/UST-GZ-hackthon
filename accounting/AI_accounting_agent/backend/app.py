@@ -213,6 +213,10 @@ def _import_jsonl_if_needed() -> None:
                 description = payload.get("描述") or payload.get("description") or ""
                 merchant = payload.get("商户") or payload.get("merchant")
                 payment = payload.get("支付方式") or payload.get("payment_method")
+                bill_type = payload.get("type") or payload.get("类型") or "expense"
+                bill_type = {"收入": "income", "支出": "expense"}.get(bill_type, bill_type)
+                if bill_type not in {"income", "expense"}:
+                    continue
                 if not event_date or amount is None:
                     continue
                 amount = float(amount)
@@ -231,11 +235,11 @@ def _import_jsonl_if_needed() -> None:
                     (
                         event_date,
                         category,
-                        "expense",
+                        bill_type,
                         amount,
                         "CNY",
                         description if description else (f"{merchant or ''}消费").strip(),
-                        "jsonl",
+                        payload.get("source") or "jsonl",
                         metadata_json,
                         now,
                     ),
@@ -822,7 +826,7 @@ def _build_advice_center_context(ref_date: date) -> dict:
 
 
 def build_advice_payload() -> dict:
-    today = date.today()
+    today = REPORT_REFERENCE_DATE
     return {
         "overview": _build_overview_context(today),
         "behavior": _build_behavior_context(today),
