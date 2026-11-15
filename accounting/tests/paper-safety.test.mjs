@@ -6,7 +6,7 @@ import {paperOperation,paperExecutionId,paperReviewFingerprint} from '../web/pap
 import {createInvestmentUI} from '../web/investment-ui.mjs';
 import {authorizeSafety,beginChallenge,verifyChallenge,acquireExecution,lockSafety,invalidateSafetyEpoch,DEMO_VERIFICATION_CODE} from '../web/safety-policy.mjs';
 
-const NOW=Date.parse('2026-11-02T09:00:00+08:00'),USER={kind:'user',method:'click'};
+const NOW=Date.parse('2026-11-15T09:00:00+08:00'),USER={kind:'user',method:'click'};
 const baseline={revision:4,holdings:[{id:'synthetic-cmb',code:'600036',name:'招商银行',asset_class:'stock',quantity:'200',total_cost:'8019.84',market_value:'8354.00',reference_price:41.77,quote_as_of:'2026-10-23',quote_quality:'reference_close'}]};
 const setup=()=>{const state=fresh();ensurePaperPortfolio(state,baseline);return state;};
 const input=(patch={})=>({code:'600036',name:'招商银行',side:'buy',quantity:'100',price:'40.00',quoteDate:'2026-10-23',...patch});
@@ -28,7 +28,7 @@ test('paper descriptor binds every trade field and separates a historical quote 
  assert.equal(op.kind,'paper_buy');assert.equal(op.id,'paper:paper-bind-0001');assert.equal(op.revision,review.revision+1);assert.equal(op.scheduledAt,null);
  assert.deepEqual(JSON.parse(op.parameters),{code:review.code,name:review.name,side:review.side,quantity:review.quantity,priceMinor:review.priceMinor,referenceMinor:review.referenceMinor,amountMinor:review.amountMinor,quoteDate:review.quoteDate,portfolioRevision:review.revision,requestId:'paper-bind-0001'});
  assert.equal(op.parameterKey,op.parameters);assert.ok(Object.isFrozen(op)&&Object.isFrozen(op.scope));
- const dated=paperOperation(state,review,'paper-bind-0001',{scheduledAt:'2026-11-02T13:14:00+08:00'});
+ const dated=paperOperation(state,review,'paper-bind-0001',{scheduledAt:'2026-11-15T13:14:00+08:00'});
  assert.notEqual(dated.scheduledAt,op.scheduledAt);
 });
 
@@ -76,7 +76,7 @@ test('a completed same-request replay is read-only after reload and lock; a chan
  assert.deepEqual(executePaperTrade(state,packet.review,packet.id),first);assert.equal(JSON.stringify(state),before);
  const changed={...packet.review,quantity:50,amountMinor:200000};changed.fingerprint=paperReviewFingerprint(changed);
  assert.throws(()=>executePaperTrade(state,changed,packet.id),/参数已变化/);
- assert.throws(()=>executePaperTrade(state,packet.review,packet.id,{scheduledAt:'2026-11-03T00:00:00+08:00'}),/参数已变化/);
+ assert.throws(()=>executePaperTrade(state,packet.review,packet.id,{scheduledAt:'2026-11-16T00:00:00+08:00'}),/参数已变化/);
  assert.equal(state.ledger.filter(row=>row.id==='paper-trade:'+packet.id).length,1);
 });
 
@@ -87,7 +87,7 @@ test('an existing pending execution cannot be submitted again or manufacture a p
 });
 
 test('a future explicit execution time stays gated until due and remains in its receipt binding',()=>{
- const scheduledAt='2026-11-02T09:01:00+08:00',state=setup();
+ const scheduledAt='2026-11-15T09:01:00+08:00',state=setup();
  const packet=verified(state,reviewed(state,'paper-due-0001',{}, {scheduledAt})),before=financial(state);
  assert.throws(()=>run(state,packet),e=>e.code==='not_due');assert.equal(financial(state),before);
  const result=run(state,packet,{now:NOW+60000});assert.equal(result.scheduledAt,scheduledAt);

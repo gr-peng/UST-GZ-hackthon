@@ -1,3 +1,4 @@
+import {STORY_DATE} from './demo-calendar.mjs';
 import {MAX_AMOUNT_MINOR,MAX_AMOUNT_YUAN} from './limits.mjs';
 import {budgetReceiptFacts} from './budget-result.mjs';
 import {CONTACTS,SOURCES,parameterFingerprint} from './task-parameters.mjs';
@@ -7,7 +8,7 @@ const options={transaction_ref:[['unrecognized_1299','生活账户1608 陌生交
 export function clarificationFields(draft,esc){return draft.missing.map(key=>{
  const value=draft.fields[key];
  if(key==='amount_minor')return `<label>金额（元）<input name="amount_minor" type="number" inputmode="decimal" min="0.01" max="${MAX_AMOUNT_YUAN}" step="0.01" value="${esc(draft.uiValues?.[key]??(value?value/100:''))}" required></label>`;
- if(key==='scheduled_date')return `<label>日期<input name="scheduled_date" type="date" value="${esc(value||'2026-11-02')}" required></label>`;
+ if(key==='scheduled_date')return `<label>日期<input name="scheduled_date" type="date" value="${esc(value||STORY_DATE)}" required></label>`;
  return `<label>${fieldLabels[key]||'补充信息'}<select name="${esc(key)}" required><option value="">请选择</option>${(options[key]||[]).map(([id,label])=>`<option value="${id}" ${id===value?'selected':''}>${esc(label)}</option>`).join('')}</select></label>`;
 }).join('');}
 export function draftWithInputs(draft,values){

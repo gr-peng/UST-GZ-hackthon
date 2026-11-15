@@ -1,0 +1,41 @@
+/* Small additions to scenario 5; original showcase, phone and buttons keep their styles. */
+.memory-evidence{margin:0 4px 8px;color:var(--slate-11,#60646c);font-size:12px;line-height:1.6}
+.memory-evidence>summary{cursor:pointer;width:fit-content}
+.memory-spark{display:none}
+.memory-count{margin-left:8px;color:var(--slate-10,#8b8d98);font-size:11px}
+.memory-evidence-body{padding:10px 0 2px}
+.memory-evidence-label{font-weight:600;margin:12px 0 6px;color:var(--slate-12,#1c2024)}
+.memory-evidence ol{padding-left:18px;margin:6px 0}
+.memory-evidence li{margin:8px 0}
+.memory-evidence small{display:block}
+.memory-evidence li p,.memory-caption,.memory-reason{margin:4px 0}
+.memory-recommended{font-weight:inherit}
+.context-summary{margin:10px 0;font-size:13px;line-height:1.6}
+.context-summary>div{display:flex;justify-content:space-between;gap:12px;margin:4px 0}
+.context-summary dd{margin:0;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.context-total{border-top:1px solid rgba(130,145,175,.18);padding-top:6px;font-weight:600}
+.intent-demo-tools{margin-top:8px;font-size:13px;line-height:1.6}
+.sc-offline .intent-demo-tools>summary{font-size:13px;font-weight:400;color:var(--muted,#60646c)}
+.intent-controls{font-size:13px;line-height:1.6;min-width:0}
+.intent-note,.intent-facts{color:var(--slate-11,#60646c);font-size:12px;line-height:1.6}
+.sc-offline .intent-controls p{margin:8px 0;font-size:12px}
+.intent-field{display:block;margin:10px 0}
+.intent-field select,.intent-field textarea{display:block;width:100%;box-sizing:border-box;margin-top:5px;padding:8px 10px;border:1px solid rgba(130,145,175,.24);border-radius:12px;background:rgba(255,255,255,.65);color:inherit;font:inherit}
+.intent-field textarea{resize:vertical}
+.intent-toggle{display:flex;align-items:center;gap:6px}
+.intent-toggle input{margin:0}
+.intent-update{margin:10px 0}
+.intent-update>summary{cursor:pointer;font-size:13px;font-weight:400}
+.intent-tools-row{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.intent-controls button,.memory-evidence .intent-settings{padding:7px 10px;border:1px solid rgba(130,145,175,.18);border-radius:14px;background:rgba(255,255,255,.65);color:var(--accent,#3e63dd);font:inherit;cursor:pointer}
+.sc-offline .intent-controls button{margin:0;font-size:12px}
+.intent-controls button:disabled{opacity:.5;cursor:default}
+.intent-section-title{font-weight:600}
+.intent-section-title span{font-weight:400;margin-left:8px;font-size:12px;color:var(--slate-11,#60646c)}
+.intent-pending{padding:8px 0}
+.intent-pending button+button{margin-left:6px}
+.intent-error{color:#b42318}
+.intent-settings{margin-top:8px}
+
+/* Keep the original pig illustration at card size inside Bot messages. */
+.agent-message-content .savings-pig svg{width:100%;height:100%;fill:var(--pink-3,#fee9f5);stroke:currentColor}

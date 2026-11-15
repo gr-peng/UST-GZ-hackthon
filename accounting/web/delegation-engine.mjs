@@ -1,6 +1,7 @@
 // Local plan orchestration only. The host owns safety decisions and ledger commits.
 import {validateSubscriptionReceipt} from './proactive-demo.mjs';
-export const DEFAULT_DEMO_CLOCK='2026-11-02T09:00:00+08:00';
+import {STORY_DATE} from './demo-calendar.mjs';
+export const DEFAULT_DEMO_CLOCK=STORY_DATE+'T09:00:00+08:00';
 export const LOCAL_ADAPTER='finpilot-local-demo';
 const kinds={read:'local.read',reminder:'local.reminder',book_restaurant:'local.booking.restaurant',book_cake:'local.booking.cake',message:'local.message',deposit:'local.deposit',payment:'local.payment',transfer:'local.transfer',cancel_subscription:'local.subscription.cancel',cancel_booking:'local.booking.cancel'};
 const aliases={restaurant_booking:'book_restaurant',cake_booking:'book_cake',send_message:'message',pay_deposit:'deposit',subscription_cancel:'cancel_subscription',compensate_booking:'cancel_booking'};

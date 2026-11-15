@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {reviewRecipient,validateRecipientReview,recipientOperation} from '../web/recipient-review.mjs';
 import {classifyOperation,authorizeSafety,beginChallenge,verifyChallenge,acquireExecution,DEMO_VERIFICATION_CODE,validateGrant} from '../web/safety-policy.mjs';
 
-const NOW=Date.parse('2026-11-02T09:00:00+08:00');
+const NOW=Date.parse('2026-11-15T09:00:00+08:00');
 const USER={kind:'user',method:'click'};
 const state=()=>({paused:false,ledger:[]});
 const input=(extra={})=>({reference:'new-card-6217',cardNumber:'0000000000006217',recipientName:'陈宇',purpose:'相机维修',amountMinor:50000,sourceAccount:'living_1608',...extra});

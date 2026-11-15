@@ -17,7 +17,7 @@ test('fresh model savings intent creates actual chart, retains continuation, and
   h.s.messages.push({id:'u2',role:'user',text:'每天20元，用生活账户。'});
   h.c.applyModelResult(result({daily_minor:2000,source_account:'living_1608'},{context_action:'continue',status:'clarify',mode:'none',missing:['start_date','target_minor'],cards:[],actions:[]}),{originTurnId:'u2'});
   assert.equal(h.s.savingsCoach.stage,'confirm');assert.equal(h.s.messages.find(x=>x.id==='u2').planId,id);
-  h.c.applyModelResult(result({start_date:'2026-11-03',target_minor:1200000},{context_action:'continue'}));assert.equal(h.s.savingsCoach.stage,'confirm');assert.equal(h.s.savingsJar,undefined);
+  h.c.applyModelResult(result({start_date:'2026-11-16',target_minor:1200000},{context_action:'continue'}));assert.equal(h.s.savingsCoach.stage,'confirm');assert.equal(h.s.savingsJar,undefined);
   await h.c.handleAction('savings-confirm-plan',{},{});
   assert.equal(h.s.savingsJar.saved_minor,0);assert.equal(h.s.savingsJar.daily_minor,2000);assert.equal(h.c.pendingCount(),0);
   assert.equal(h.s.companion.planPresentations[id].collapse,true);

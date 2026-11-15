@@ -9,7 +9,7 @@ test('transfer receipt, ledger, balance, category, daily chart and summary recon
  let s=fresh();const before=financialFacts(s),count=s.ledger.length,t=execute(s,'salary',1800);
  transition(s,t.id,'unknown');assert.equal(s.ledger.length,count);assert.equal(s.balance,50000);assert.equal(financialFacts(s).expenseMinor,748711);
  transition(s,t.id,'complete');let rows=ledgerView(s).filter(r=>r.taskId===t.id);assert.equal(rows.length,1);assert.equal(rows[0].receipt,t.receipt);assert.equal(rows[0].amountMinor,180000);assert.equal(rows[0].title,'给妈妈转账');assert.equal(t.ledgerId,rows[0].id);
- let f=financialFacts(s);assert.equal(s.balance,48200);assert.equal(f.expenseMinor,928711);assert.equal(f.netExpenseMinor,893051);assert.equal(f.netCashflowMinor,686949);assert.equal(f.days[0],356800);assert.equal(f.days[1],928711);assert.equal(f.days.at(-1),928711);assert.equal(f.categories.find(x=>x[0]==='人情往来')[1],180000);
+ let f=financialFacts(s);assert.equal(s.balance,48200);assert.equal(f.expenseMinor,928711);assert.equal(f.netExpenseMinor,893051);assert.equal(f.netCashflowMinor,686949);assert.equal(f.days[0],356800);assert.equal(f.days[14],928711);assert.equal(f.days.at(-1),928711);assert.equal(f.categories.find(x=>x[0]==='人情往来')[1],180000);
  s=JSON.parse(JSON.stringify(s));for(let i=0;i<3;i++)ensureFinance(s);assert.equal(s.balance,48200);assert.equal(s.ledger.length,count+1);assert.equal(financialFacts(s).expenseMinor,before.expenseMinor+180000);assert.throws(()=>transition(s,t.id,'complete'));assert.equal(s.ledger.length,count+1);
 });
 test('cancelled and unknown operations never create financial rows',()=>{

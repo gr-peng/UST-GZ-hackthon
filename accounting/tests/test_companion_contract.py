@@ -12,12 +12,12 @@ from backend.agent_provider import ProviderError, run_provider
 
 
 KEY='unit-test-fake-companion-credential'
-BIRTHDAY={'birthday_date':'2026-11-09','budget_minor':120000,'partner_id':'partner-linxia','city':'上海','source_account':'living_1608'}
+BIRTHDAY={'birthday_date':'2026-11-18','budget_minor':120000,'partner_id':'partner-linxia','city':'上海','source_account':'living_1608'}
 PAYLOAD={'validation_scope':'finpilot-fifteen-v1','text':'下周林夏生日，帮我安排一下','tool_catalog':[],'run_history':[]}
 
 
 def proposal(scenario='birthday',fields=None,**patch):
-    default={'wealth_guide':{},'savings_coach':{},'birthday':BIRTHDAY,'rent_reminder':{},'subscription_reminder':{'subscription_action':'keep'},'security_case':{'case_id':'reported_scam'},'compound':{'items':[{'id':'item-1','kind':'sms','contact_id':'mom','message':'周末回家吃饭。'},{'id':'item-2','kind':'cake','product_id':'demo-cake-01','date':'2026-11-09','pickup_time':'16:00','fulfillment':'pickup','source_account':'living_1608'}]}}
+    default={'wealth_guide':{},'savings_coach':{},'birthday':BIRTHDAY,'rent_reminder':{},'subscription_reminder':{'subscription_action':'keep'},'security_case':{'case_id':'reported_scam'},'compound':{'items':[{'id':'item-1','kind':'sms','contact_id':'mom','message':'周末回家吃饭。'},{'id':'item-2','kind':'cake','product_id':'demo-cake-01','date':'2026-11-18','pickup_time':'16:00','fulfillment':'pickup','source_account':'living_1608'}]}}
     result={'status':'propose','scenario':scenario,'reply':'我先整理安排，等你核对后再继续。','fields':copy.deepcopy(default[scenario] if fields is None else fields),'missing':[],
             'actions':[{'type':COMPANION_ACTIONS[scenario]}],'cards':[]}
     result.update(patch)
@@ -55,7 +55,7 @@ class CompanionContractTests(unittest.TestCase):
             {'status':'answer','scenario':'other','reply':'你好，有什么交给我？'},
             {'status':'answer','scenario':'question','reply':'请看账本数据。','query':'spending_month','period_month':'2026-10'},
             {'status':'clarify','scenario':'ambiguous','reply':'想安排什么用途和金额？','missing':['purpose','amount_minor']},
-            {'status':'propose','scenario':'transfer','reply':'请核对转账方案。','mode':'create','context_action':'new','fields':{'amount_minor':80000,'payee_id':'mom','source_account':'salary_0826','scheduled_date':'2026-11-02'}},
+            {'status':'propose','scenario':'transfer','reply':'请核对转账方案。','mode':'create','context_action':'new','fields':{'amount_minor':80000,'payee_id':'mom','source_account':'salary_0826','scheduled_date':'2026-11-15'}},
             {'status':'propose','scenario':'subscription','reply':'请核对下次续费安排。','mode':'update','task_id':'old-task','fields':{'subscription_id':'video','subscription_action':'cancel'}},
             {'status':'propose','scenario':'card_review','reply':'请核对这笔交易。','mode':'create','fields':{'transaction_ref':'unrecognized_1299','source_account':'living_1608'}},
         ]
@@ -118,7 +118,7 @@ class CompanionContractTests(unittest.TestCase):
             with self.subTest(status=status),self.assertRaises(ContractError):validate_result(proposal(status=status,actions=[],mode='none',missing=['budget_minor']))
 
     def test_real_calendar_dates_and_plain_bounded_city_are_checked(self):
-        for value in ['2026-02-30','2026-13-01','2026-11-09T13:14:00+08:00','0000-01-01',True]:
+        for value in ['2026-02-30','2026-13-01','2026-11-18T13:14:00+08:00','0000-01-01',True]:
             with self.subTest(date=value),self.assertRaises(ContractError):validate_result(proposal(fields={**BIRTHDAY,'birthday_date':value}))
         self.assertEqual(validate_result(proposal(fields={**BIRTHDAY,'birthday_date':'2028-02-29'}))['fields']['birthday_date'],'2028-02-29')
         for city in ['', ' ', ' 上海 ', '<script>上海</script>', '上\x00海', '上\n海', '城'*41, ['上海']]:
@@ -228,7 +228,7 @@ class CompanionContractTests(unittest.TestCase):
         context={'scenario':'birthday','fields':BIRTHDAY,'missing':[],'plan_id':'birthday-local-1','revision':1,'status':'scheduled'}
         messages=request_messages({**PAYLOAD,'text':'先暂停这项生日安排','run_companion':context})
         self.assertIn('birthday-local-1',messages[-1]['content'])
-        event={'event_id':'case-event-1','type':'rent_due','fixture_id':'rent-20261103'}
+        event={'event_id':'case-event-1','type':'rent_due','fixture_id':'rent-20261116'}
         messages=request_messages({**PAYLOAD,'run_event':event,'run_companion':context})
         self.assertIn('不得触发plan_control',messages[0]['content'])
 
@@ -303,7 +303,7 @@ class CompanionContractTests(unittest.TestCase):
         self.assertNotIn(KEY,json.dumps(raised.exception.diagnostic));conn.request.assert_called_once()
 
     def test_system_has_explicit_fixed_story_and_distinguishes_normal_content_from_injection(self):
-        for value in ['2026-11-02','2026-11-09','18:30','13:14','328','188','50','520','3500','2026-11-03','28日25元','living_1608','partner-linxia','safe_external_content','prompt_injection_page','voice_matched','voice_unknown','不包含执行授权']:
+        for value in ['2026-11-15','2026-11-18','18:30','13:14','328','188','50','520','3500','2026-11-16','28日25元','living_1608','partner-linxia','safe_external_content','prompt_injection_page','voice_matched','voice_unknown','不包含执行授权']:
             self.assertIn(value,SYSTEM_PROMPT if value!='不包含执行授权' else request_messages(PAYLOAD)[-1]['content'])
         self.assertIn('普通hi仍answer/other',SYSTEM_PROMPT)
         self.assertIn('不要固定复读示例',SYSTEM_PROMPT)
@@ -316,7 +316,7 @@ if __name__=='__main__':unittest.main()
 class CompoundContractTests(unittest.TestCase):
     def fields(self):
         return {'items':[{'id':'item-1','kind':'sms','contact_id':'mom','message':'周末回家吃饭。'},
-                         {'id':'item-2','kind':'cake','product_id':'demo-cake-01','date':'2026-11-09','pickup_time':'16:00','fulfillment':'pickup','source_account':'living_1608'}]}
+                         {'id':'item-2','kind':'cake','product_id':'demo-cake-01','date':'2026-11-18','pickup_time':'16:00','fulfillment':'pickup','source_account':'living_1608'}]}
 
     def test_complete_ordered_requests_are_one_inert_proposal_not_one_discarded_task(self):
         fields=self.fields();result=validate_result(proposal('compound',fields=fields,cards=[{'type':'compound_plan'}]))

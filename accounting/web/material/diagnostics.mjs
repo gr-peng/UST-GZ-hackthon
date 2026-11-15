@@ -32,7 +32,7 @@ export function installDiagnostics(renderer,readStatus) {
     if(document.hidden||!document.hasFocus()||window!==window.top||c.scrollRange<10) {
       result({started:false,reason:'需要前台有焦点的顶层页面，并有实际滚动范围',conditions:c});return;
     }
-    if(variant==='glass'&&(!renderer.resources||renderer.lost||renderer.terminal)) {
+    if(variant==='glass'&&(!renderer.resources||renderer.lost||renderer.terminal||renderer.glassBudgetFallback)) {
       result({started:false,reason:'玻璃未就绪，不能作为有效玻璃样本',conditions:c});return;
     }
     renderer.cancel();renderer.manualBenchmark=true;

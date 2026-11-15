@@ -56,9 +56,9 @@ test('offline completion never offers cloud replay and menu has only the retaine
  const app=readFileSync(new URL('../web/app.js',import.meta.url),'utf8'),menu=app.slice(app.indexOf('function eventMenu()'),app.indexOf('function bot()'));assert.match(menu,/injection_email/);assert.doesNotMatch(menu,/injection_page|injection_order|safe_external_content/);
 });
 test('offline full reset stops writers before clearing only demo keys, keeping credential stores intact',()=>{
- const text=readFileSync(new URL('../web/app.js',import.meta.url),'utf8');const reset=text.slice(text.indexOf("event.data?.type!=='finpilot-reset-session'"));
+ const text=readFileSync(new URL('../web/app.js',import.meta.url),'utf8');const reset=text.slice(text.indexOf('function restartOfflineDemo()'));
  assert.ok(reset.indexOf('documentLifetime.stop()')<reset.indexOf('localStorage.removeItem'));
- assert.match(reset,/demoResetKeys\(Object.keys\(localStorage\),namespace\)/);assert.doesNotMatch(reset,/localStorage.clear|document.cookie/);assert.match(reset,/location.reload\(\)/);
+ assert.match(reset,/intentReplayResetKeys\(Object.keys\(localStorage\),namespace\)/);assert.doesNotMatch(reset,/localStorage.clear|document.cookie/);assert.match(reset,/location.reload\(\)/);
 });
 
 test('confirmed ride has one visible due reminder, editable timing and no repeat after reset',async()=>{

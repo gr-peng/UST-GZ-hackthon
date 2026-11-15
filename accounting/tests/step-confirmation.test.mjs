@@ -8,7 +8,7 @@ import {createCompanionController} from '../web/companion-controller.mjs';
 const copy=x=>structuredClone(x);
 const compoundFields={items:[
  {id:'item-1',kind:'sms',contact_id:'mom',message:'妈妈，周六中午一起吃饭。'},
- {id:'item-2',kind:'cake',product_id:'demo-cake-01',date:'2026-11-09',pickup_time:'16:00',fulfillment:'pickup',source_account:'living_1608'}
+ {id:'item-2',kind:'cake',product_id:'demo-cake-01',date:'2026-11-18',pickup_time:'16:00',fulfillment:'pickup',source_account:'living_1608'}
 ]};
 const response=(fields=compoundFields,extra={})=>({status:'propose',scenario:'compound',reply:'请先核对给妈妈的短信，再逐项确认蛋糕。',speak:null,
  fields:copy(fields),missing:[],mode:'create',task_id:null,context_action:'new',cards:[{type:'compound_plan'}],actions:[{type:'prepare_compound'}],query:null,period_month:null,...extra});
@@ -59,7 +59,7 @@ test('three separate confirmations send SMS, create the cake order, then debit o
   assert.notEqual(h.plan().steps.find(n=>n.id==='item-2.cake.order').status,'succeeded');
   assert.notEqual(h.plan().steps.find(n=>n.id==='item-2.cake.deposit').status,'succeeded');
   assert.deepEqual(h.writes().map(x=>x.snapshot.kind),['message']);assert.equal(h.state.balance,balance);assert.equal(h.state.ledger.length,rows);
-  const cake=plainMain(h.controller.render());assert.match(cake,/麦穗蛋糕|陈老板/);assert.match(cake,/138\s*0000\s*0004/);assert.match(cake,/2026-11-09/);assert.match(cake,/16:00/);assert.match(cake,/188/);assert.match(cake,/50/);assert.doesNotMatch(cake,/预订2026-11-09 16:00自取的六寸草莓蛋糕一份/);assert.match(h.controller.render(),/预订2026-11-09 16:00自取的六寸草莓蛋糕一份/);
+  const cake=plainMain(h.controller.render());assert.match(cake,/麦穗蛋糕|陈老板/);assert.match(cake,/138\s*0000\s*0004/);assert.match(cake,/2026-11-18/);assert.match(cake,/16:00/);assert.match(cake,/188/);assert.match(cake,/50/);assert.doesNotMatch(cake,/预订2026-11-18 16:00自取的六寸草莓蛋糕一份/);assert.match(h.controller.render(),/预订2026-11-18 16:00自取的六寸草莓蛋糕一份/);
   assert.equal(await h.confirm(),'item-2.cake.order');
   assert.equal(h.plan().steps.find(n=>n.id==='item-2.cake.order').status,'succeeded');
   assert.notEqual(h.plan().steps.find(n=>n.id==='item-2.cake.deposit').status,'succeeded');
@@ -102,7 +102,7 @@ test('editing a pending SMS invalidates its former button and preserves both req
 test('editing the future cake after a sent SMS preserves that receipt and never sends SMS again',async()=>{
  await withController(async h=>{
   h.controller.applyModelResult(response(),{originTurnId:'compound-edit-cake'});await h.confirm();
-  const p=h.plan(),smsReceipt=p.steps.find(n=>n.id==='item-1.sms').receipt_id,updated=copy(compoundFields);updated.items[1].date='2026-11-10';
+  const p=h.plan(),smsReceipt=p.steps.find(n=>n.id==='item-1.sms').receipt_id,updated=copy(compoundFields);updated.items[1].date='2026-11-23';
   h.controller.applyModelResult(response(updated,{mode:'update',task_id:p.id,context_action:'continue'}),{originTurnId:'compound-new-cake-date'});
   assert.equal(h.plan().steps.find(n=>n.id==='item-1.sms').receipt_id,smsReceipt);assert.equal(h.plan().steps.find(n=>n.id==='item-1.sms').status,'succeeded');
   assert.equal(await h.confirm(),'item-2.cake.order');assert.equal(await h.confirm(),'item-2.cake.deposit');
@@ -144,7 +144,7 @@ test('compound fill-in retains the SMS and every known cake field while passing 
   assert.equal(h.controller.modelContext().fields.items.length,2);
   const oldForm=globalThis.FormData;
   globalThis.FormData=class {constructor(form){this.fields=form.fields;}*[Symbol.iterator](){yield* Object.entries(this.fields);}};
-  try{assert.equal(await h.controller.handleSubmit({target:{id:'companion-model-form',fields:{'items.1.date':'2026-11-09'}}}),true);}finally{globalThis.FormData=oldForm;}
+  try{assert.equal(await h.controller.handleSubmit({target:{id:'companion-model-form',fields:{'items.1.date':'2026-11-18'}}}),true);}finally{globalThis.FormData=oldForm;}
   assert.equal(h.sends.length,1);assert.equal(h.sends[0].options.companionClarification,true);
   assert.deepEqual(h.controller.modelContext().fields,compoundFields);
   assert.equal(h.controller.manager.snapshot().plans.length,0);assert.equal(h.grantIds().length,0);
@@ -198,7 +198,7 @@ test('contextual cancel binds a compound clarification draft ID and cannot cance
 test('an ordinary greeting may hide a selected plan but cancellation still targets that exact plan and no other',async()=>{
  await withController(async h=>{
   h.controller.applyModelResult(response(),{originTurnId:'compound-selected-cancel'});await until(()=>!!nextWrite(h.plan()));
-  const selected=h.plan(),other=h.controller.manager.createBirthdayPlan({birthday_date:'2026-11-09',budget_minor:120000,partner_id:'partner-linxia',city:'上海',source_account:'living_1608'});
+  const selected=h.plan(),other=h.controller.manager.createBirthdayPlan({birthday_date:'2026-11-18',budget_minor:120000,partner_id:'partner-linxia',city:'上海',source_account:'living_1608'});
   assert.equal(h.controller.applyModelResult({status:'answer',scenario:'other',reply:'你好，可以继续说。',speak:null,fields:{},missing:[],mode:'none',task_id:null,context_action:'none',cards:[],actions:[],query:null,period_month:null}),null);
   h.controller.hidePresentation();
   assert.equal(h.state.companion.activePlanId,null);assert.equal(h.controller.render(),'');assert.equal(h.controller.modelContext().plan_id,selected.id);

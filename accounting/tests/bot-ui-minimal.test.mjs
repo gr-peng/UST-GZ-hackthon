@@ -6,7 +6,7 @@ import {lockSafety,DEMO_VERIFICATION_CODE} from '../web/safety-policy.mjs';
 
 // Actual delivered controller with deterministic microphone/model boundaries.
 // These are integration fixtures, never evidence of a real LLM or human speech.
-const fields={birthday_date:'2026-11-09',budget_minor:120000,partner_id:'partner-linxia',city:'上海',source_account:'living_1608'};
+const fields={birthday_date:'2026-11-18',budget_minor:120000,partner_id:'partner-linxia',city:'上海',source_account:'living_1608'};
 const model=(scenario,status,extra={})=>({scenario,status,reply:'这是一条来自本次受控模型响应的自然回复。',speak:null,
  fields:{},missing:[],mode:status==='propose'?'create':'none',task_id:null,query:null,period_month:null,
  context_action:'none',cards:[],actions:[],...extra});
@@ -166,9 +166,9 @@ test('a model proposal prepares bounded birthday cards but cannot grant consent 
 
 test('continuing clarification retains prior known slots when the next normalized response omits them',async()=>{
  await withController(async h=>{
-  h.controller.applyModelResult(clarify({fields:{birthday_date:'2026-11-09',city:'上海'},missing:['budget_minor','partner_id','source_account']}));
+  h.controller.applyModelResult(clarify({fields:{birthday_date:'2026-11-18',city:'上海'},missing:['budget_minor','partner_id','source_account']}));
   h.controller.applyModelResult(clarify({fields:{budget_minor:120000},missing:['partner_id','source_account'],context_action:'continue'}));
-  assert.deepEqual(h.controller.modelContext().fields,{birthday_date:'2026-11-09',city:'上海',budget_minor:120000});
+  assert.deepEqual(h.controller.modelContext().fields,{birthday_date:'2026-11-18',city:'上海',budget_minor:120000});
   assert.deepEqual(h.controller.modelContext().missing,['partner_id','source_account']);
   assert.equal(h.controller.manager.snapshot().plans.length,0);
   assert.equal(Object.keys(h.state.safety.grants).length,0);
@@ -177,7 +177,7 @@ test('continuing clarification retains prior known slots when the next normalize
 
 test('clarification form returns explicit edits to the normal model sender instead of creating a local preset reply',async()=>{
  await withController(async h=>{
-  h.controller.applyModelResult(clarify({fields:{birthday_date:'2026-11-09',city:'上海'},missing:['budget_minor','partner_id','source_account']}));
+  h.controller.applyModelResult(clarify({fields:{birthday_date:'2026-11-18',city:'上海'},missing:['budget_minor','partner_id','source_account']}));
   const savedFormData=globalThis.FormData,messages=h.state.messages.length;
   globalThis.FormData=class {constructor(form){this.fields=form.fields;}*[Symbol.iterator](){yield* Object.entries(this.fields);}};
   try{
@@ -402,7 +402,7 @@ test('fixed demonstration clock events cannot choose arbitrary times, move backw
   const balance=h.state.balance,rows=h.state.ledger.length;
   h.controller.applyModelResult(birthday());const id=h.state.companion.activePlanId;
   await h.controller.advanceDemoClock('advance_birthday_clock');
-  assert.ok(h.controller.now()>=Date.parse('2026-11-09T05:14:00Z'));
+  assert.ok(h.controller.now()>=Date.parse('2026-11-18T05:14:00Z'));
   assert.notEqual(h.controller.manager.getPlan(id).steps.find(n=>n.id==='birthday.transfer').status,'succeeded');
   assert.equal(h.state.balance,balance);assert.equal(h.state.ledger.length,rows);
   assert.equal(Object.keys(h.state.safety.grants).length,0);

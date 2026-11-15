@@ -63,7 +63,7 @@ const taskChanges={
  id:t=>{t.id+='-other';},revision:t=>{t.revision++;},receipt:t=>{t.receipt='FP-OTHER';},
  amount:t=>{t.amount=801;},target:t=>{t.target='爸爸 尾号 4382';},kind:t=>{t.kind='investment';},
  payee:t=>{t.payeeId='dad';},sourceAccount:t=>{t.sourceAccount='living_1608';},currency:t=>{t.currency='USD';},
- date:t=>{t.scheduledDate='2026-11-03';},scope:t=>{t.scope='all_future';},cadence:t=>{t.cadence='monthly';},
+ date:t=>{t.scheduledDate='2026-11-16';},scope:t=>{t.scope='all_future';},cadence:t=>{t.cadence='monthly';},
  purpose:t=>{t.purpose='changed';},subscription:t=>{t.subscriptionId='music';},subscriptionAction:t=>{t.subscriptionAction='keep';},
  renewal:t=>{t.nextRenewalDate='2026-12-02';},subscriptionRevision:t=>{t.subscriptionRevision=2;},
  risk:t=>{t.riskFlags=['voice_mismatch'];},origin:t=>{t.agentOrigin=true;}
@@ -114,7 +114,7 @@ test('existing financial row is read-only and remains queryable during lock and 
  assert.equal(ledgerView(state).filter(r=>r.taskId===task.id).length,1);
 });
 
-for(const change of [t=>{t.kind='redemption';},t=>{t.revision++;},t=>{t.scheduledDate='2026-11-03';},t=>{t.sourceAccount='living_1608';},t=>{t.amount++;},t=>{t.receipt='FP-OTHER';}])test('read-only existing row lookup rejects inconsistent financial facts',()=>{
+for(const change of [t=>{t.kind='redemption';},t=>{t.revision++;},t=>{t.scheduledDate='2026-11-16';},t=>{t.sourceAccount='living_1608';},t=>{t.amount++;},t=>{t.receipt='FP-OTHER';}])test('read-only existing row lookup rejects inconsistent financial facts',()=>{
  const {state,task}=ready();postOperation(state,task);state.safety.locked=true;change(task);
  deniedWithoutMutation(state,task,/原流水不一致/);
 });

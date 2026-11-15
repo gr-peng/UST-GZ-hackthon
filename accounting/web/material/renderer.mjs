@@ -8,7 +8,7 @@ export class AppGlass {
   constructor(app, canvas, onStatus, options = {}) {
     Object.assign(this, {app, canvas, onStatus, options, enabled:true, targets:[], shapes:[], dirty:true,
       frames:0, skipped:0, geometryReads:0, backgroundBuilds:0, epoch:0, raf:0, cap:1.5,
-      cpu:[], painted:new Set(), lost:false, disposed:false, terminal:false});
+      cpu:[], painted:new Set(), lost:false, disposed:false, terminal:false,glassBudgetFallback:false,lastBudgetFrame:0});
     this.visible=[]; this.nextPainted=new Set(); this.lastElements=[];
     this.lastGeometry=new Float64Array(MAX_SURFACES*6); this.hasDrawn=false;
     this.originalBackground = app.style.background;
@@ -22,7 +22,7 @@ export class AppGlass {
       scroll:() => this.requestDraw(), resize:() => this.resize().catch(e => this.fallback(e.message, true)),
       visibility:() => {if(document.hidden) {this.cancel();this.metal?.pause();} else {this.dirty = true; this.requestDraw();} this.status();},
       lost:event => {event.preventDefault(); this.lost = true; this.fallback('context-lost');},
-      restored:() => {this.metal?.dispose({lost:true});this.metal=null;this.lost = false; this.resources = false; this.texture = this.source = this.fbo = null;
+      restored:() => {this.metal?.dispose({lost:true});this.metal=null;this.lost = false; this.reason=this.glassBudgetFallback?'measured-render-budget':null; this.resources = false; this.texture = this.source = this.fbo = null;
         this.gpu = null; this.key = null; this.resize().catch(e => this.fallback(e.message, true));}
     };
     window.addEventListener('scroll', this.handlers.scroll, {passive:true});
@@ -131,7 +131,17 @@ export class AppGlass {
   }
   draw() {
     if(!this.enabled || this.terminal || !this.resources || this.lost || document.hidden || this.disposed) return;
-    const start = performance.now(), gl = this.gl, shapes = this.geometry();
+    const start = performance.now(), gl = this.gl;
+    // Expensive page glass may fall back to CSS; card motion remains interactive
+    // in the same context and runs at a lower cadence instead of being disabled.
+    if(this.glassBudgetFallback) {
+      try{if(this.metal?.render(start,Math.min(this.dpr,1)))this.frames++;}
+      catch(e){this.bankReason=e.message;this.metal?.fallback();}
+      this.status();
+      if(this.metal?.active)this.requestDraw();
+      return;
+    }
+    const shapes = this.geometry();
     // One WebGL2 context. Metal is copied immediately into an ordinary 2D DOM
     // canvas, then this same backing buffer is cleared/redrawn for App glass.
     // This lets the whole card and its sharp HTML foreground share CSS tilt.
@@ -180,15 +190,26 @@ export class AppGlass {
     if(this.metal?.active)this.requestDraw();
   }
   checkQuality() {
+    if(this.glassBudgetFallback)return;
     const gpu = this.gpu.result(), cpu = distribution(this.cpu);
     const decision = qualityDecision({gpuSamples:gpu.samples,gpuP95:gpu.p95Ms,cpuSamples:cpu.samples,cpuP95:cpu.p95Ms,cap:this.cap});
     if(decision==='lower-resolution') {this.cap = 1; this.cpu=[]; this.gpu.dispose(); this.gpu = new GpuTimer(this.gl);
       this.resize().catch(e=>this.fallback(e.message,true));}
-    else if(decision==='readable-fallback') this.fallback('measured-render-budget',true);
+    else if(decision==='readable-fallback') {
+      this.glassBudgetFallback=true;this.lastBudgetFrame=0;
+      this.cancel();this.clearPainted();this.app.style.background=this.originalBackground;
+      document.body.dataset.fpMaterialState='fallback';this.reason='measured-render-budget';this.hasDrawn=false;
+      this.status();this.requestDraw();
+    }
   }
   requestDraw() {
     if(this.raf || this.manualBenchmark || !this.enabled || this.terminal || this.lost || document.hidden || this.disposed) return;
-    this.raf = requestAnimationFrame(()=>{this.raf=0;try{this.draw();}catch(e){this.fallback(e.message,true);}});
+    this.raf = requestAnimationFrame(now=>{
+      this.raf=0;
+      if(this.glassBudgetFallback&&this.lastBudgetFrame&&now-this.lastBudgetFrame<1000/30){this.requestDraw();return;}
+      if(this.glassBudgetFallback)this.lastBudgetFrame=now;
+      try{this.draw();}catch(e){this.fallback(e.message,true);}
+    });
   }
   cancel() {cancelAnimationFrame(this.raf); this.raf=0;}
   clearPainted() {for(const e of this.painted) e.removeAttribute('data-fp-painted'); this.painted.clear(); this.canvas.hidden=true;}
@@ -199,7 +220,7 @@ export class AppGlass {
   }
   setEnabled(enabled, reason='readable-preference') {
     this.enabled=enabled;
-    if(!enabled) this.fallback(reason); else if(!this.terminal) {this.reason=null;this.dirty=true;this.requestDraw();}
+    if(!enabled) this.fallback(reason); else if(!this.terminal) {this.reason=this.glassBudgetFallback?'measured-render-budget':null;this.dirty=true;this.requestDraw();}
   }
   status() {
     this.onStatus({version:'r5-rc3-integrated-r11',phase:this.reason||(!this.resources?'initializing':'ready'),
@@ -209,7 +230,7 @@ export class AppGlass {
       renderedFrames:this.frames,backgroundBuilds:this.backgroundBuilds,geometryReads:this.geometryReads,
       skippedUnchanged:this.skipped,pendingRaf:!!this.raf,visibility:document.visibilityState,
       documentHasFocus:document.hasFocus(),cpuSubmission:distribution(this.cpu),gpu:this.gpu?.result(),
-      bankMetal:{frames:this.metal?.frames||0,active:!!this.metal?.active,reason:this.bankReason||null,sharedWebglContext:true,textureBytes:256*256*4*3},
+      bankMetal:{targetFps:this.glassBudgetFallback?30:null,frames:this.metal?.frames||0,active:!!this.metal?.active,reason:this.bankReason||null,sharedWebglContext:true,textureBytes:256*256*4*3},
       arbitraryDomRefraction:false,navReadability:'transparent CSS blur(24px), not optical DOM refraction'});
   }
   verifyBackground() {

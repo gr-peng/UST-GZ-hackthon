@@ -18,7 +18,7 @@ test('copied overview excludes principal flows and keeps refund separate',()=>{
  assert.deepEqual(after,before);assert.equal(s.balance,48200);assert.equal(s.invested,1800);
 });
 test('native shell route adaptation has exactly five distinct correct links',()=>{
- const html=bridge(fresh()).nav('investment');assert.deepEqual([...html.matchAll(/href="#\/([^\"]+)"/g)].map(m=>m[1]),['today','bot','finance','investment','me']);assert.equal((html.match(/aria-current="page"/g)||[]).length,1);assert.match(html,/data-nav-tab="investment" aria-current="page"/);
+ const html=bridge(fresh()).nav('investment');assert.deepEqual([...html.matchAll(/href="#\/([^\"]+)"/g)].map(m=>m[1]),['today','finance','bot','investment','me']);assert.equal((html.match(/aria-current="page"/g)||[]).length,1);assert.match(html,/data-nav-tab="investment" aria-current="page"/);
 });
 
  test('native month filter keeps visible rows and totals on the same period',()=>{const b=bridge(fresh());b.ui.month='2024-10';assert.equal(b.ledgerRows().length,0);assert.equal(b.report(b.ledgerRows()).totals.gross_expense_minor,0);b.ui.month='2026-11';assert.equal(b.ledgerRows().length,10)});

@@ -1,4 +1,5 @@
 import {validateCompoundFields,compoundMissing,mergeCompoundFields} from './compound-fields.mjs';
+import {DEMO_START_AT,RENT_DUE_DATE,BIRTHDAY_DATE} from './demo-calendar.mjs';
 export {validateCompoundFields,compoundMissing,mergeCompoundFields,COMPOUND_ITEM_FIELDS} from './compound-fields.mjs';
 // Local, deterministic demo orchestration. No DOM, timers, network or ledger access.
 // The host owns authentication, risk decisions and rendering of these card objects.
@@ -65,7 +66,7 @@ function deepFreeze(value) {
 }
 
 export const PROACTIVE_DEMO_FIXTURES = deepFreeze({
-  start_at: '2026-10-26T01:00:00.000Z',
+  start_at: DEMO_START_AT,
   contacts: [
     { id: 'partner-linxia', name: '林夏', relation: '女朋友', account_suffix: '0520', phone: '13800000003', synthetic: true },
     { id: 'mom', name: '妈妈', relation: '母亲', phone: '13800000001', synthetic: true },
@@ -77,11 +78,11 @@ export const PROACTIVE_DEMO_FIXTURES = deepFreeze({
   lease: { recipient_id: 'landlord-chen', amount_minor: 280000, currency: 'CNY', source_account: 'living_1608' },
   subscription: { id: 'cloud-music', name: '云音乐会员', amount_minor: 2500, renewal_day: 28, source_account: 'living_1608' },
   rent_email: {
-    id: 'demo-mail-rent-202611', type: 'rent_email', received_at: '2026-10-26T00:45:00Z',
-    from: 'landlord@example.invalid', subject: '11月房租提醒', due_date: '2026-11-01', amount_minor: 280000,
-    body: '下个月房租2800元，请在11月1日前处理。',
+    id: 'demo-mail-rent-202611', type: 'rent_email', received_at: '2026-11-15T00:45:00Z',
+    from: 'landlord@example.invalid', subject: '11月房租提醒', due_date: RENT_DUE_DATE, amount_minor: 280000,
+    body: '本期房租2800元，请在11月16日前处理。',
   },
-  birthday: { birthday_date: '2026-11-06', budget_minor: 120000, partner_id: 'partner-linxia', city: '上海', source_account: 'living_1608' },
+  birthday: { birthday_date: BIRTHDAY_DATE, budget_minor: 120000, partner_id: 'partner-linxia', city: '上海', source_account: 'living_1608' },
   restaurant: { id: 'demo-restaurant-01', name: '梧桐里 · 双人晚餐', amount_minor: 32800, dinner_time: '18:30' },
   cake: { id: 'demo-cake-01', name: '六寸草莓蛋糕', amount_minor: 18800, deposit_minor: 5000, contact_id: 'cake-owner' },
 });
@@ -637,7 +638,7 @@ export const PROACTIVE_DEMO_DIALOGUES = deepFreeze([
   {
     id: 'rent-and-subscription', title: '主动提醒，但不替我扩大授权',
     turns: [
-      { speaker: 'bot', text: '陈先生刚发来11月房租提醒，2800元，11月1日到期。和你保存的租约一致。要从生活账户支付这一个月吗？', cue: 'ingestRentEmail；对话内展示来源、租约与范围' },
+      { speaker: 'bot', text: '陈先生刚发来11月房租提醒，2800元，11月16日到期。和你保存的租约一致。要从生活账户支付这一个月吗？', cue: 'ingestRentEmail；对话内展示来源、租约与范围' },
       { speaker: 'user', text: '确认，只付这一个月。', cue: 'authorize rent.payment；调用主安全门后 run' },
       { speaker: 'bot', text: '这笔演示付款已完成，回执在这里。另外，28号云音乐会员将续费25元。这次还继续吗？', cue: 'tick生成订阅提醒；显示两个不同来源' },
       { speaker: 'user', text: '这次不续。', cue: 'cancel订阅任务；不创建支付回执' },
@@ -649,7 +650,7 @@ export const PROACTIVE_DEMO_DIALOGUES = deepFreeze([
     turns: [
       { speaker: 'user', text: '我女朋友下周生日，帮我订餐厅和蛋糕，当天13:14给她转520。', cue: 'createBirthdayPlan({})' },
       { speaker: 'bot', text: '我记得林夏在通讯录里。先确认她的生日日期、用餐城市、总预算和付款账户。', cue: 'clarification卡，不能把“下周”猜成某一天' },
-      { speaker: 'user', text: '11月6日，在上海，总共1200以内，用生活账户，收款人就是林夏。', cue: 'clarify(planId, PROACTIVE_DEMO_FIXTURES.birthday)' },
+      { speaker: 'user', text: '11月18日，在上海，总共1200以内，用生活账户，收款人就是林夏。', cue: 'clarify(planId, PROACTIVE_DEMO_FIXTURES.birthday)' },
       { speaker: 'bot', text: '晚餐328元，蛋糕188元，转账520元，总计1036元。蛋糕先付50元定金。你可以在这里逐项确认，转账只限林夏、520元和当天13:14。', cue: 'task_graph和confirmation卡；每项有参数绑定' },
       { speaker: 'user', text: '确认这些安排。', cue: 'authorize所有敏感步骤；run；除定时转账外先完成演示步骤' },
       { speaker: 'bot', text: '餐厅和蛋糕的演示回执已保存，13:14的转账在本地队列里。到时我会重新检查授权和风险。', cue: '只显示本地演示证据，不声称真实MCP或后台服务' },

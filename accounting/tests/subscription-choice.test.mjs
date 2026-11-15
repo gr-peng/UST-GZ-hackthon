@@ -36,7 +36,7 @@ function setup({adapterHook,gateHook,snapshot,core,clock=createDemoClock(START)}
 }
 
 test('explicit subscription preparation works before reminder day and unknown choices are atomic',()=>{
- const h=setup();h.clock.set('2026-11-02T01:00:00Z');assert.equal(h.demo.scanSubscription(),null);
+ const h=setup();h.clock.set('2026-11-15T01:00:00Z');assert.equal(h.demo.scanSubscription(),null);
  const p=h.demo.prepareSubscription({action:'cancel'});assert.equal(p.fields.subscription_action,'cancel');assert.equal(p.planned_total_minor,0);
  const before=h.demo.snapshot();for(const input of [{},{action:'refund'},{action:'cancel',verified:true},null,[]])assert.throws(()=>h.demo.prepareSubscription(input));
  assert.deepEqual(h.demo.snapshot(),before);assert.throws(()=>h.demo.scanSubscription({action:'unknown'}));

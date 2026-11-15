@@ -18,7 +18,7 @@ export const QUESTION_CATALOG=[
  {id:'recent_task',question:'解释一下刚才完成的安排，不要创建或执行新操作。',title:'已完成的安排',view:'receipt'}
 ];
 export const SUBSCRIPTIONS=[{id:'video',name:'映像会员',currentMinor:6800,previousMinor:2800,nextDate:'2026-11-25',rightsUntil:'2026-11-25'},
- {id:'cloud',name:'云空间',currentMinor:1800,previousMinor:1800,nextDate:'2026-11-10',rightsUntil:'2026-11-10'},
+ {id:'cloud',name:'云空间',currentMinor:1800,previousMinor:1800,nextDate:'2026-11-23',rightsUntil:'2026-11-23'},
  {id:'music',name:'回声音乐',currentMinor:1500,previousMinor:1500,nextDate:'2026-11-18',rightsUntil:'2026-11-18'}];
 export const CONTACTS=[{id:'mom',name:'妈妈',suffix:'6821'},{id:'dad',name:'爸爸',suffix:'4382'}];
 export const SOURCES=[{id:'salary_0826',name:'工资账户',suffix:'0826'},{id:'living_1608',name:'生活账户',suffix:'1608'}];

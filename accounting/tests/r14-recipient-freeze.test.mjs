@@ -4,7 +4,7 @@ import {reviewRecipient,validateRecipientReview,recipientOperation} from '../web
 import {ensureSafety,authorizeSafety,beginChallenge,verifyChallenge,beginRecovery,recoverSafety,refreshTimedFreeze,lockSafety,acquireExecution,commitExecution,validateGrant,PASSWORD_FREEZE_MS,DEMO_VERIFICATION_CODE} from '../web/safety-policy.mjs';
 import {renderSafetyBanner} from '../web/companion-ui.mjs';
 
-const NOW=Date.parse('2026-11-02T01:00:00Z'),USER={kind:'user',method:'click'};
+const NOW=Date.parse('2026-11-15T01:00:00Z'),USER={kind:'user',method:'click'};
 const input=(patch={})=>({cardNumber:'0000000000006217',recipientName:'陈宇',amountMinor:30000,sourceAccount:'living_1608',...patch});
 const op=(patch={})=>({id:'old-write',revision:1,kind:'transfer',target:'妈妈',amountMinor:10000,currency:'CNY',parameters:'{"amount_minor":10000}',scope:'once',...patch});
 const state=()=>({ledger:[],paused:false});

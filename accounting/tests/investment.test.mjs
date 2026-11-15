@@ -9,7 +9,7 @@ const baseline={revision:4,holdings:[{id:'demo-cmb',code:'600036',name:'招商�
 function setup(){const s=fresh();ensurePaperPortfolio(s,baseline);return s;}
 const input=(extra={})=>({code:'600036',name:'招商银行',side:'buy',quantity:'100',price:'40.00',quoteDate:'2026-10-23',...extra});
 // Explicit synthetic user authorization/challenge; production code has no auto-verifier.
-const TEST_NOW=Date.parse('2026-11-02T09:00:00+08:00');
+const TEST_NOW=Date.parse('2026-11-15T09:00:00+08:00');
 const TEST_USER={kind:'user',method:'click'};
 function trade(state,review,requestId){
  if(state.paperPortfolio.trades.some(entry=>entry.requestId===requestId))return executePaperTrade(state,review,requestId);

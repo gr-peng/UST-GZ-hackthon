@@ -21,13 +21,13 @@ spec.loader.exec_module(cli)
 
 class DemoQueueTests(unittest.TestCase):
     def setUp(self):
-        self.queue = demo_events.DemoEventQueue(now=lambda: datetime(2026, 11, 2, 1, tzinfo=timezone.utc))
+        self.queue = demo_events.DemoEventQueue(now=lambda: datetime(2026, 11, 15, 1, tzinfo=timezone.utc))
 
     def test_only_allowlisted_fixed_public_events_are_accepted(self):
         for event_type in demo_events.EVENT_TYPES:
             event = self.queue.publish('showcase', event_type)['event']
             self.assertEqual(event['type'], event_type)
-            self.assertEqual(event['occurred_at'], '2026-11-02T01:00:00.000Z')
+            self.assertEqual(event['occurred_at'], '2026-11-15T01:00:00.000Z')
             self.assertEqual(event['source'], {'kind': 'program', 'mode': 'local_demo'})
             if event_type.startswith('voice_'):
                 self.assertIs(event['data']['identity_verified'], False)
@@ -36,7 +36,7 @@ class DemoQueueTests(unittest.TestCase):
         self.assertEqual(len(self.queue.poll('showcase')['events']), len(demo_events.EVENT_TYPES))
 
     def test_clock_events_have_only_fixed_targets_and_duplicate_delivery_does_not_advance_again(self):
-        targets = {'advance_birthday_clock': '2026-11-09T05:14:00Z',
+        targets = {'advance_birthday_clock': '2026-11-18T05:14:00Z',
                    'advance_subscription_clock': '2026-11-28T01:00:00Z'}
         for event_type, target in targets.items():
             first = self.queue.publish('showcase', event_type, event_type)
@@ -204,7 +204,7 @@ class DemoEventHTTPTests(unittest.TestCase):
         status, _, first = self.request('POST', '/api/demo/events',
             {'scope': 'showcase', 'event': 'advance_birthday_clock', 'request_id': 'clock-once'})
         self.assertEqual(status, 200)
-        self.assertEqual(first['event']['data'], {'target_at': '2026-11-09T05:14:00Z'})
+        self.assertEqual(first['event']['data'], {'target_at': '2026-11-18T05:14:00Z'})
         status, _, second = self.request('POST', '/api/demo/events',
             {'scope': 'showcase', 'event': 'advance_birthday_clock', 'request_id': 'clock-once'})
         self.assertEqual(status, 200); self.assertTrue(second['duplicate'])
@@ -245,7 +245,7 @@ class DemoEventCLITests(unittest.TestCase):
             def __init__(self, index): self.index = index
             def read(self, _maximum):
                 result = {'csrf': 'synthetic-csrf-only'} if self.index == 0 else {
-                    'event': {'id': 'showcase:1', 'type': 'rent_due', 'scope': 'showcase', 'fixture_id': 'rent-20261103'},
+                    'event': {'id': 'showcase:1', 'type': 'rent_due', 'scope': 'showcase', 'fixture_id': 'rent-20261116'},
                     'duplicate': False, 'mode': 'local_demo'}
                 return json.dumps(result).encode()
             def getheader(self, _name): return 'finpilot_dot_session_65321=synthetic-cookie-only; HttpOnly' if self.index == 0 else None

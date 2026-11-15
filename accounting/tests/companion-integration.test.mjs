@@ -7,7 +7,7 @@ import {syncFinance} from '../web/finance-state.mjs';
 import {createDemoClock,createLocalDemoAdapters,createProactiveDemo,PROACTIVE_DEMO_FIXTURES} from '../web/proactive-demo.mjs';
 import {createProactiveSafetyBridge,proactiveSafetyOperation,reconcileProactiveSnapshot} from '../web/delegation-engine.mjs';
 
-const START='2026-11-02T01:00:00.000Z';
+const START='2026-11-15T01:00:00.000Z';
 const USER={kind:'user',method:'click'};
 const copy=value=>structuredClone(value);
 const cashOperations=new Set(['transfer','pay_deposit','pay_rent']);
@@ -18,8 +18,8 @@ function deferred(){let resolve;const promise=new Promise(done=>{resolve=done;})
 // only one detached clone containing both the safety receipt and synthetic ledger.
 function setup({adapterHook,effectHook,persistHook,snapshot}={}){
  const fixtures=copy(PROACTIVE_DEMO_FIXTURES);
- fixtures.start_at=START;fixtures.birthday.birthday_date='2026-11-09';fixtures.lease.amount_minor=350000;
- fixtures.rent_email={...fixtures.rent_email,id:'integration-rent',received_at:START,due_date:'2026-11-03',amount_minor:350000,body:'11月房租3500元。'};
+ fixtures.start_at=START;fixtures.birthday.birthday_date='2026-11-18';fixtures.lease.amount_minor=350000;
+ fixtures.rent_email={...fixtures.rent_email,id:'integration-rent',received_at:START,due_date:'2026-11-16',amount_minor:350000,body:'11月房租3500元。'};
  let current=fresh();policy.ensureSafety(current);current.integration={grants:{},effects:[]};
  const clock=createDemoClock(START),raw=createLocalDemoAdapters({fixtures}),contexts=[];
  const getState=()=>current;
@@ -155,11 +155,11 @@ test('birthday DAG posts the deposit once and the 520 transfer exactly at China 
  h.consent(plan.id,{verify:true});await h.demo.run(plan.id);
  assert.equal(h.cashRows().length,1);assert.equal(h.cashRows()[0].amountMinor,5000);assert.equal(h.getState().balance,baseline-50);
  assert.equal(h.node(plan.id,'birthday.transfer').attempts,0);assert.equal(h.demo.queue()[0].registered,true);
- h.clock.set('2026-11-09T05:13:59Z');await h.demo.tick({execute:true});
+ h.clock.set('2026-11-18T05:13:59Z');await h.demo.tick({execute:true});
  assert.equal(h.cashRows().length,1);assert.equal(h.node(plan.id,'birthday.transfer').attempts,0);
  h.clock.advance(1000);await h.demo.tick({execute:true});
  const transfer=h.getState().integration.effects.find(effect=>effect.operation==='transfer');
- assert.equal(transfer.at,'2026-11-09T05:14:00.000Z');assert.equal(transfer.amountMinor,52000);
+ assert.equal(transfer.at,'2026-11-18T05:14:00.000Z');assert.equal(transfer.amountMinor,52000);
  assert.equal(h.cashRows().length,2);assert.equal(h.getState().balance,baseline-50-520);
  assert.equal(h.node(plan.id,'birthday.transfer').status,'succeeded');
  await h.demo.tick({execute:true});await h.demo.run(plan.id);

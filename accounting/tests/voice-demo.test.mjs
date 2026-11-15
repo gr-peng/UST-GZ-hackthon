@@ -6,7 +6,7 @@ const tick=()=>new Promise(resolve=>setImmediate(resolve));
 function harness({pending=false,fails=false,identity='matched',...options}={}){
  let clock=1000,callbacks,stopped=0;
  const events=[],calls=[];
- const card={taskId:'task-520',revision:3,target:'小林',amountMinor:52000,currency:'CNY',action:'转账',parameterKey:'source=living_1608&date=2026-11-09',expiresAt:31000};
+ const card={taskId:'task-520',revision:3,target:'小林',amountMinor:52000,currency:'CNY',action:'转账',parameterKey:'source=living_1608&date=2026-11-18',expiresAt:31000};
  let current={...card};
  const input={supported:true,start(value){callbacks=value;},abort(){stopped++;}};
  const tts={kind:'test-model',supported:true,cancel(){},speak(text,{signal,onStart}){calls.push(text);onStart?.({});if(fails)return Promise.reject(Error('offline'));if(!pending)return Promise.resolve();return new Promise((resolve,reject)=>signal.addEventListener('abort',()=>reject(Object.assign(Error('cancelled'),{name:'AbortError'})),{once:true}));}};
@@ -144,7 +144,7 @@ test('unknown or mismatched identity never emits a confirmation request',()=>{
 });
 
 test('target, amount, parameter version, source and schedule changes invalidate a confirmation',()=>{
- for(const update of [{target:'陌生人'},{amountMinor:53000},{revision:4},{parameterKey:'source=other&date=2026-11-10'},{expiresAt:999}]){
+ for(const update of [{target:'陌生人'},{amountMinor:53000},{revision:4},{parameterKey:'source=other&date=2026-11-23'},{expiresAt:999}]){
   const h=harness();listen(h);const armed=h.voice.armConfirmation(h.card,{userGesture:true});h.change(update);h.emit(armed.phrase);
   assert.equal(requests(h).length,0);assert.ok(h.events.some(e=>e.reason==='parameters-changed'));h.voice.dispose();
  }

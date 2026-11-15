@@ -1,0 +1,45 @@
+/* Keep the current page styling; only arrange the requested entries. */
+#app[data-approved-ui] .ap-nav a[data-nav-tab="bot"] > svg {
+ box-sizing:content-box;
+ width:25px;
+ height:25px;
+ padding:8px;
+ margin-top:-12px;
+ border-radius:50%;
+ color:#fff;
+ background:var(--indigo9,#3e63dd);
+ box-shadow:0 5px 12px #3e63dd26;
+}
+#app[data-approved-ui] .ap-nav a[data-nav-tab="bot"] {overflow:visible}
+#app[data-route="assistant"] .bot-topbar .task-link {grid-column:1;justify-self:start;gap:4px}
+#app[data-route="assistant"] .bot-topbar .bot-reset {grid-column:3;justify-self:end}
+.task-workspace-tabs {display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:5px;margin:0 0 20px;border:1px solid #ffffffc9;background:#ffffff70;border-radius:24px}
+.task-workspace-tabs a {display:block;text-align:center;padding:11px 7px;border-radius:20px;color:var(--slate11,#60646c);text-decoration:none;font-size:14px}
+.task-workspace-tabs a[aria-current="page"] {background:#ffffffd9;color:var(--indigo11,#3a5bc7);box-shadow:0 2px 7px #7088b312}
+.connected-tools-intro {font-size:13px;color:var(--slate11);line-height:1.8;margin:0 0 17px}
+.connected-tools-grid {display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.connected-tool {display:flex;flex-direction:column;align-items:flex-start;gap:9px;margin:0!important;padding:20px!important;text-align:left;font:inherit;cursor:pointer;color:inherit;min-width:0}
+.connected-tool-icon {display:grid;place-items:center;width:46px;height:46px;border-radius:13px;background:#eaf0ff;color:var(--indigo11)}
+.connected-tool-icon img {width:46px;height:46px;border-radius:13px}
+.connected-tool-icon svg {width:24px;height:24px}
+.connected-tool > strong {font-size:15px}
+.connected-tool > small {color:var(--slate11)}
+.connected-tool-status {display:flex;align-items:center;gap:5px;margin-top:4px;color:#50826a;font-size:11px}
+.connected-tool-status i {width:5px;height:5px;border-radius:50%;background:#72a88c}
+.connected-tool-detail {display:grid;gap:13px;padding-top:12px}
+.connected-tool-detail p {color:var(--slate11);line-height:1.8}
+.ap-research .investment-sections {grid-template-columns:repeat(2,minmax(0,1fr))}
+.research-toolbar {display:flex;justify-content:flex-end;margin-bottom:9px}
+.research-toolbar button {min-height:38px;padding:7px 13px;border:1px solid #ffffffce;border-radius:20px;background:#ffffff8c;color:var(--indigo11);font:inherit;font-size:12px}
+.research-funds {display:grid;gap:12px}
+.research-fund {padding:20px;border:1px solid #ffffffd9;border-radius:24px;background:linear-gradient(125deg,#ffffffaa,#e9edff55)}
+.research-fund h3 {margin:0 0 7px}
+.research-fund-type {color:var(--slate11);font-size:12px;margin:0 0 15px}
+.research-fund-meta {display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--slate11);margin:12px 0}
+.research-funds > .ap-w-button {justify-self:end}
+.research-trend-chart {margin-top:15px;min-width:0}
+.research-trend-chart svg {max-width:100%;height:auto}
+.research-compare-options {display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.research-compare-options button {border:1px solid #dde3ef;background:#ffffff80;border-radius:16px;padding:7px 10px;min-height:36px;font:inherit;font-size:12px;color:var(--slate11)}
+.research-compare-options button[aria-pressed="true"] {color:var(--indigo11);border-color:var(--indigo8);background:#edf2ff}
+.connected-tool:focus-visible,.task-workspace-tabs a:focus-visible,.research-toolbar button:focus-visible {outline:2px solid var(--indigo9);outline-offset:3px}

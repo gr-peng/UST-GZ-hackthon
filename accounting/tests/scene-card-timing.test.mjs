@@ -27,7 +27,7 @@ async function start(h){h.input(OFFLINE_PROMPTS.recipient);await h.action('recip
 
 test('password success survives render-time sync and executes the same reviewed recipient once',async()=>{
  for(const known of [false,true])await fixture(async h=>{
-  if(known)h.update(s=>{s.recipientHistory=[{cardNumber:'0000000000006217',recipientName:'陈宇'}];s.ledger.push({id:'previous-transfer',kind:'transfer',date:'2026-11-02',amountMinor:80000,direction:'expense'});ensureFinance(s);});
+  if(known)h.update(s=>{s.recipientHistory=[{cardNumber:'0000000000006217',recipientName:'陈宇'}];s.ledger.push({id:'previous-transfer',kind:'transfer',date:'2026-11-15',amountMinor:80000,direction:'expense'});ensureFinance(s);});
   const before=h.state.balance,rows=h.state.ledger.length;
   h.input(OFFLINE_PROMPTS.recipient);const recipientId=h.state.companion.recipient.id;
   assert.equal(h.state.companion.recipient.review.evidence.first_transfer,!known);

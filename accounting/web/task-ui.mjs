@@ -1,3 +1,4 @@
+import {STORY_DATE} from './demo-calendar.mjs';
 import {MAX_AMOUNT_YUAN} from './limits.mjs';
 import {budgetPreview,budgetReceiptFacts} from './budget-result.mjs';
 import {taskParameters,parameterFingerprint,CONTACTS,SOURCES} from './task-parameters.mjs';
@@ -41,7 +42,7 @@ export function taskEditHTML(t,{esc}){
  const select=(name,label,values,current)=>`<label>${label}<select name="${name}" required>${values.map(([id,text])=>`<option value="${id}" ${id===current?'selected':''}>${esc(text)}</option>`).join('')}</select></label>`;
  if(['transfer','investment','redemption','planning'].includes(t.kind))html+=`<label>金额（元）<input name="amount" id="edit-amount" type="number" min="0.01" max="${MAX_AMOUNT_YUAN}" step="0.01" value="${t.amount}" required></label>`;
  if(t.kind==='transfer')html+=select('payeeId','收款人',CONTACTS.map(c=>[c.id,c.name+' 尾号 '+c.suffix]),p.payee_id);
- if(['transfer','investment','redemption'].includes(t.kind))html+=select('sourceAccount','付款账户',SOURCES.map(a=>[a.id,a.name+' '+a.suffix]),p.source_account)+select('currency','币种',[['CNY','人民币 CNY']],p.currency)+`<label>日期<input name="scheduledDate" type="date" value="${esc(p.scheduled_date)}" min="2026-11-02" max="2026-11-02" required></label>`;
+ if(['transfer','investment','redemption'].includes(t.kind))html+=select('sourceAccount','付款账户',SOURCES.map(a=>[a.id,a.name+' '+a.suffix]),p.source_account)+select('currency','币种',[['CNY','人民币 CNY']],p.currency)+`<label>日期<input name="scheduledDate" type="date" value="${esc(p.scheduled_date)}" min="2026-11-15" max="2026-11-15" required></label>`;
  if(t.kind==='subscription')html+=select('subscriptionId','订阅对象',SUBSCRIPTIONS.map(x=>[x.id,x.name]),p.subscription_id)+select('subscriptionAction','下次续费安排',Object.entries(actionNames),p.subscription_action);
  return html;
 }

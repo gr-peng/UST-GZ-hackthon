@@ -8,13 +8,13 @@ import * as policy from '../web/safety-policy.mjs';
 import {fresh} from '../web/engine.mjs';
 import {syncFinance} from '../web/finance-state.mjs';
 const USER={kind:'user',method:'click'},copy=x=>structuredClone(x);
-const fields=()=>({items:[{id:'item-1',kind:'sms',contact_id:'mom',message:'周末回家吃饭。'},{id:'item-2',kind:'cake',product_id:'demo-cake-01',date:'2026-11-09',pickup_time:'16:00',fulfillment:'pickup',source_account:'living_1608'}]});
+const fields=()=>({items:[{id:'item-1',kind:'sms',contact_id:'mom',message:'周末回家吃饭。'},{id:'item-2',kind:'cake',product_id:'demo-cake-01',date:'2026-11-18',pickup_time:'16:00',fulfillment:'pickup',source_account:'living_1608'}]});
 const proposal=(patch={})=>({status:'propose',scenario:'compound',reply:'这两项逐项核对后继续。',speak:'这两项逐项核对后继续。',fields:fields(),missing:[],mode:'create',task_id:null,context_action:'new',query:null,period_month:null,cards:[{type:'compound_plan'}],actions:[{type:'prepare_compound'}],...patch});
 function setup(hook,snapshot,existingState){
  let state=existingState?copy(existingState):fresh();policy.ensureSafety(state);state.compoundTest??={grants:{},effects:[]};
- const clock=createDemoClock('2026-11-02T01:00:00Z'),raw=createLocalDemoAdapters(),calls=[];
+ const clock=createDemoClock('2026-11-15T01:00:00Z'),raw=createLocalDemoAdapters(),calls=[];
  const bridge=createProactiveSafetyBridge({policy,getState:()=>state,persist:next=>{state=copy(next);},getGrantId:op=>state.compoundTest.grants[op.id],acceptReplay:()=>true,
-  onCommitEffect(next,{operation,result,context}){const key=operation.id+':v'+operation.revision;assert.ok(!next.compoundTest.effects.some(x=>x.key===key));next.compoundTest.effects.push({key,operation:context.step.operation,payload:copy(context.step.payload),receipt:result.receipt_id});if(operation.amountMinor){next.ledger.push({id:'compound:'+key,date:'2026-11-02',title:context.step.title,category:'餐饮',amountMinor:operation.amountMinor,direction:'expense',movement:'cashflow',kind:'transfer',taskId:operation.id,receipt:result.receipt_id,source:'synthetic'});syncFinance(next);}}});
+  onCommitEffect(next,{operation,result,context}){const key=operation.id+':v'+operation.revision;assert.ok(!next.compoundTest.effects.some(x=>x.key===key));next.compoundTest.effects.push({key,operation:context.step.operation,payload:copy(context.step.payload),receipt:result.receipt_id});if(operation.amountMinor){next.ledger.push({id:'compound:'+key,date:'2026-11-15',title:context.step.title,category:'餐饮',amountMinor:operation.amountMinor,direction:'expense',movement:'cashflow',kind:'transfer',taskId:operation.id,receipt:result.receipt_id,source:'synthetic'});syncFinance(next);}}});
  const manager=createProactiveDemo({clock,snapshot,safetyGate:bridge,adapters:{mode:'local_demo',reset:()=>raw.reset(),execute:async input=>{calls.push(copy(input));return hook?hook(input,raw):raw.execute(input);}}});
  const op=(plan,node)=>proactiveSafetyOperation({mode:'local_demo',plan_id:plan.id,revision:plan.revision,step:node,source:plan.source,now:clock.now()});
  function consent(id,stepId){const plan=manager.getPlan(id),node=plan.steps.find(n=>n.id===stepId);const next=copy(state);const operation=op(plan,node),grant=policy.authorizeSafety(next,operation,{source:USER,now:Date.parse(clock.now())});next.compoundTest.grants[operation.id]=grant.id;state=next;manager.authorize(id,{revision:plan.revision,step_ids:[stepId],confirmed:true,expires_at:new Date(Date.parse(clock.now())+300000).toISOString()});}
@@ -32,7 +32,7 @@ test('unknown contact and missing cake slots preserve both requests; partial ans
  const incomplete=fields();incomplete.items[0].contact_id='unknown';incomplete.items[1].date=null;incomplete.items[1].pickup_time=null;
  assert.deepEqual(compoundMissing(incomplete),['items.0.contact_id','items.1.date','items.1.pickup_time']);
  assert.throws(()=>validateCompanionResult(proposal({fields:incomplete})));
- const first=mergeCompoundFields(incomplete,{'items.0.contact_id':'mom'}),second=mergeCompoundFields(first,{items:[{id:'item-2',kind:'cake',date:'2026-11-09'}]});
+ const first=mergeCompoundFields(incomplete,{'items.0.contact_id':'mom'}),second=mergeCompoundFields(first,{items:[{id:'item-2',kind:'cake',date:'2026-11-18'}]});
  assert.equal(second.items[0].message,'周末回家吃饭。');assert.equal(second.items[1].product_id,'demo-cake-01');assert.deepEqual(compoundMissing(second),['items.1.pickup_time']);
  assert.deepEqual(mergeCompoundFields(second,{'items.1.pickup_time':'16:00'}),fields());
  assert.throws(()=>mergeCompoundFields(second,{items:[{id:'item-3',kind:'sms',contact_id:'dad',message:'新任务'}]}));
@@ -65,7 +65,7 @@ test('a retry uses its originating turn id; changed same-turn parameters never s
 
 test('clarify/retry keeps all compound items and rejects stale confirmation after edit',async()=>{
  const f=setup(),initial=fields();initial.items[1].date=null;const p=f.manager.createCompoundPlan(initial);
- assert.equal(p.steps.length,0);assert.deepEqual(p.missing,['items.1.date']);const next=f.manager.clarifyCompound(p.id,{'items.1.date':'2026-11-09'});assert.equal(next.fields.items[0].message,'周末回家吃饭。');assert.equal(next.revision,2);
+ assert.equal(p.steps.length,0);assert.deepEqual(p.missing,['items.1.date']);const next=f.manager.clarifyCompound(p.id,{'items.1.date':'2026-11-18'});assert.equal(next.fields.items[0].message,'周末回家吃饭。');assert.equal(next.revision,2);
  f.consent(p.id,'item-1.sms');const edited=f.manager.clarifyCompound(p.id,{'items.0.message':'换成周日回家。'});assert.equal(edited.revision,3);await f.manager.run(p.id);assert.equal(f.calls.length,0);assert.deepEqual(f.state().compoundTest.effects,[]);
 });
 

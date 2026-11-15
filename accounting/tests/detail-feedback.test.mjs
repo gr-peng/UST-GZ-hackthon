@@ -5,7 +5,7 @@ import {prepareCardProduct,commitCardProduct,hasIssuedCard} from '../web/bank-ca
 import {createBankCards,bankCardState} from '../web/bank-cards.mjs';
 import {planOutcome,successFeedback,renderConversation} from '../web/task-feedback.mjs';
 const esc=x=>String(x),money=n=>String(n);
-const ui=s=>createBankCards({getState:()=>s,save(){},esc,money,icon:()=>'',onLedger(){}});
+const ui=s=>createBankCards({features:{cardApplications:true,creditLimitAdjustment:true},getState:()=>s,save(){},esc,money,icon:()=>'',onLedger(){}});
 test('fresh wallet has two cards; explicit application creates exactly one third card and no debit',()=>{
  const s=fresh(),cash=s.balance,rows=s.ledger.length;
  assert.equal(hasIssuedCard(s),false);assert.match(ui(s).html(),/2张/);assert.doesNotMatch(ui(s).html(),/bank-card-credit/);
@@ -30,8 +30,8 @@ test('success animation requires a committed receipt, never pending, failure or 
 });
 test('scheduled transfer is arranged but not paid; partial, failed and cancelled results remain distinct',()=>{
  const step=(id,status,receipt)=>({id,status,receipt_id:receipt,confirmation_required:true,payload:{amount_minor:5000},operation:'pay_deposit'});
- const p={kind:'birthday',status:'scheduled',steps:[step('deposit','succeeded','d'),{...step('later','pending'),operation:'transfer',scheduled_for:'2026-11-09T05:14:00Z'}]};
- const o=planOutcome(p,{now:Date.parse('2026-11-02'),granted:true});assert.equal(o.status,'已安排，待执行');assert.match(o.summary,/尚未转出/);assert.match(o.summary,/50/);assert.equal(o.collapse,true);
+ const p={kind:'birthday',status:'scheduled',steps:[step('deposit','succeeded','d'),{...step('later','pending'),operation:'transfer',scheduled_for:'2026-11-18T05:14:00Z'}]};
+ const o=planOutcome(p,{now:Date.parse('2026-11-15'),granted:true});assert.equal(o.status,'已安排，待执行');assert.match(o.summary,/尚未转出/);assert.match(o.summary,/50/);assert.equal(o.collapse,true);
  assert.equal(planOutcome(p,{now:0,granted:false}).collapse,false);
  p.status='cancelled';assert.equal(planOutcome(p).status,'已取消');p.status='failed';assert.equal(planOutcome(p).status,'部分完成');
 });

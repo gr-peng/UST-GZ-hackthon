@@ -1,4 +1,6 @@
 import * as wealth from './wealth-guide.mjs';
+import {intentFacts} from './intent-planning.mjs';
+import {DEMO_START_AT,RENT_DUE_DATE,BIRTHDAY_DATE,BIRTHDAY_CLOCK_AT} from './demo-calendar.mjs';
 import {reconcileRideReminders,tickRideReminders,cancelRideReminder} from './ride-reminders.mjs';
 import * as savings from './savings-coach.mjs';
 import {resetDemoOnBoot} from './demo-boot.mjs';
@@ -22,7 +24,7 @@ import {reviewRecipient,validateRecipientReview,recipientOperation} from './reci
 const USER={kind:'user',method:'click'};
 const ended=new Set(['done','cancelled','blocked']);
 const clone=x=>structuredClone(x);
-const START='2026-11-02T01:00:00.000Z';
+const START=DEMO_START_AT;
 const labels={ready:'待核对',needs_review:'待重新核对',blocked:'已阻断',pending:'等待前一步',started:'处理中',succeeded:'已完成',failed:'待处理',needs_confirmation:'待你确认',paused:'已暂停',cancelled:'已取消',scheduled:'等待时间',awaiting_details:'待补充'};
 const targetNames={'cake-owner':'麦穗蛋糕 陈老板','partner-linxia':'林夏','landlord-chen':'房东 陈先生','music-monthly':'云听音乐 本月订阅','cloud-music':'云音乐 本月会员'};
 const readableTarget=value=>targetNames[value]||value;
@@ -30,8 +32,8 @@ const uiError=value=>({verification_failures:'连续本人验证失败',password
 const actionNames={transfer:'转账',payment:'支付',deposit:'支付定金',investment:'申购',card:'保护卡片',subscription:'调整订阅',budget_update:'调整预算',paper_buy:'买入',paper_sell:'卖出',booking:'预订',message:'发送消息',schedule:'保存计划'};
 const fixtures=clone(PROACTIVE_DEMO_FIXTURES);
 fixtures.start_at=START;fixtures.lease.amount_minor=350000;
-fixtures.rent_email={...fixtures.rent_email,id:'rent-20261103',received_at:'2026-11-02T00:45:00Z',due_date:'2026-11-03',amount_minor:350000,body:'11月房租3500元，请在11月3日前处理。'};
-fixtures.birthday.birthday_date='2026-11-09';
+fixtures.rent_email={...fixtures.rent_email,id:'rent-20261116',received_at:'2026-11-15T00:45:00Z',due_date:RENT_DUE_DATE,amount_minor:350000,body:'11月房租3500元，请在11月16日前处理。'};
+fixtures.birthday.birthday_date=BIRTHDAY_DATE;
 const money=n=>'¥'+(Number(n||0)/100).toLocaleString('zh-CN',{minimumFractionDigits:2,maximumFractionDigits:2});
 const displayTime=iso=>new Date(iso).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai',hour12:false});
 const dateOf=now=>new Date(now+8*3600000).toISOString().slice(0,10);
@@ -85,9 +87,9 @@ export function createCompanionController(host){
    if(manager){manager.setLocked(!!next.safety.locked||!!next.paused,next.safety.lock?.reason||'已暂停，请重新核对');const saved=clone(getState());saved.companion.proactiveSnapshot=manager.snapshot();commit(saved,{paint:false});}}
  }
  function ensureWindow(next,id){next.companion.reviewWindows??={};if(!next.companion.reviewWindows[id]||next.companion.reviewWindows[id]<=now())next.companion.reviewWindows[id]=now()+45000;return next.companion.reviewWindows[id];}
- function append(reply,{origin='program',kind='conversation',evidence=null,speak=reply,planId=null,planSummary=false}={}){
+ function append(reply,{origin='program',kind='conversation',evidence=null,speak=reply,planId=null,planSummary=false,intentEvidence=null,savingsSnapshot=null}={}){
   const envelope=companionEnvelope({reply,speak:host.disableSpeech?null:speak},{origin,kind,evidence,id:crypto.randomUUID()});
-  replayMessageId=envelope.speak?envelope.id:null;const next=clone(getState());next.messages.push({id:envelope.id,role:'assistant',text:envelope.reply,source:origin,companion:true,...(planId?{planId,planSummary}:{})});save(next);
+  replayMessageId=envelope.speak?envelope.id:null;const next=clone(getState());next.messages.push({id:envelope.id,role:'assistant',text:envelope.reply,source:origin,companion:true,...(intentEvidence?{intentEvidence}:{}),...(savingsSnapshot?{savingsSnapshot:clone(savingsSnapshot)}:{}),...(planId?{planId,planSummary}:{})});save(next);
   if(!disposed){lastSpoken=envelope;Promise.resolve().then(()=>voice?.speak(envelope,{messageId:envelope.id})).then(()=>armActive()).catch(()=>{});}
   return envelope;
  }
@@ -214,7 +216,7 @@ export function createCompanionController(host){
  }
  function resetView(){selectedPlanId=null;selectedDraft=null;activeChallenge=null;clearVoiceInput();const next=clone(getState());next.companion.activePlanId=null;next.companion.paper=null;next.companion.blockedTaskId=null;next.companion.origin=null;next.companion.modelDraft=null;next.companion.recipient=null;next.companion.securityNotice=null;save(next);}
  async function handleText(){return false;}
- async function advanceDemoClock(type){const target={advance_birthday_clock:'2026-11-09T05:14:00Z',advance_subscription_clock:'2026-11-28T01:00:00Z'}[type];if(!target||now()>Date.parse(target))throw Error('时钟不能倒退，请新开合成会话。');clock.set(target);await manager.tick({execute:true});savingsTick();save();for(const p of manager.snapshot().plans)summarizePlan(p.id,{speak:false});host.toBot?.();append('已核对到期安排，完成与暂停状态已更新。',{kind:'safety_status',speak:null});}
+ async function advanceDemoClock(type){const target={advance_birthday_clock:BIRTHDAY_CLOCK_AT,advance_subscription_clock:'2026-11-28T01:00:00Z'}[type];if(!target||now()>Date.parse(target))throw Error('时钟不能倒退，请新开合成会话。');clock.set(target);await manager.tick({execute:true});savingsTick();save();for(const p of manager.snapshot().plans)summarizePlan(p.id,{speak:false});host.toBot?.();append('已核对到期安排，完成与暂停状态已更新。',{kind:'safety_status',speak:null});}
  function inspectExternalSource(type){const source=getRiskSource(type),event=getState().companion.pendingEvent;if(!source||event?.type!==type||event.fixture_id!==source.source_id)return false;applySecurityCase(source.case_id,{}, {programEvent:true});return true;}
  function selectedPlan(){if(!selectedPlanId)return null;try{return manager.getPlan(selectedPlanId);}catch{return null;}}
  function modelContext(){const state=getState();if(state.wealthGuide&&!['done','cancelled'].includes(state.wealthGuide.stage))return {scenario:'wealth_guide',fields:{choice:state.wealthGuide.stage},missing:[],draft_id:state.wealthGuide.id,revision:state.wealthGuide.revision,status:'clarify'};const sc=savings.savingsModelContext(state);if(sc)return sc;let selected=state.companion.modelDraft||activePlan();if(!selected&&!state.agentDraft&&!state.agentFocus){selected=selectedDraft;if(!selected&&selectedPlanId)try{selected=manager.getPlan(selectedPlanId);}catch{}}return companionModelContext(state,selected);}
@@ -255,20 +257,20 @@ export function createCompanionController(host){
    return {text:reportedReply||result.reply,speak:reportedReply||result.speak,card:null,taskId:null,companion:true,planId:recipient?.id||getState().companion.securityNotice?.planId||activePlan()?.id||null};
  }
 
- function finishWealth(n,text){const g=n.wealthGuide;n.companion.planPresentations??={};n.companion.planPresentations[g.id]={collapse:true,title:'这次资金安排',summary:text,status:g.stage==='cancelled'?'已取消':n.wealthSubscriptions?.some(x=>x.id===g.id&&x.status==='completed')?'已买入':'已安排'};save(n,{paint:false});append(text,{planId:g.id,planSummary:true,speak:text});}
- function prepareWealthSaving(n){const g=n.wealthGuide;if(g.stage!=='saving_confirm')return;savings.beginJarEditor(n,{now:now()});savings.updateJarEditor(n,{name:g.fields.goal+'储蓄罐',...n.savingsEditor.fields,daily_minor:g.fields.daily_minor,target_minor:g.fields.target_minor});n.savingsEditor.stage='confirm';}
+ function finishWealth(n,text,{reply=true,savingsSnapshot=null}={}){const g=n.wealthGuide;g.completionText=text;const intentEvidence=wealth.wealthDialogue(n,{now:now()})?.evidence;n.companion.planPresentations??={};n.companion.planPresentations[g.id]={collapse:true,title:'这次资金安排',summary:text,status:g.stage==='cancelled'?'已取消':n.wealthSubscriptions?.some(x=>x.id===g.id&&x.status==='completed')?'已买入':'已安排'};save(n,{paint:false});if(reply)append(text,{planId:g.id,planSummary:true,speak:text,intentEvidence,savingsSnapshot});host.readWealthRecall?.();}
+ function prepareWealthSaving(n){const g=n.wealthGuide;if(g.stage!=='saving_confirm')return;savings.beginJarEditor(n,{now:now()});savings.updateJarEditor(n,{name:g.fields.goal+(g.memoryRecall?.profile?.progressMinor?'补充':'')+'储蓄罐',...n.savingsEditor.fields,daily_minor:g.fields.daily_minor,target_minor:g.fields.target_minor});n.savingsEditor.stage='confirm';}
  function applyWealthResult(result,{originTurnId,programEvent}){
   if(programEvent)throw Error('外部消息不能发起资金安排');
   if(result.context_action==='new'||!getState().wealthGuide||['done','cancelled'].includes(getState().wealthGuide.stage)){hidePresentation({forget:true});const n=clone(getState());wealth.startWealthGuide(n,{now:now()});save(n,{paint:false});}
   const n=clone(getState()),g=n.wealthGuide,m=n.messages.find(m=>m.id===originTurnId);if(m)m.planId=g.id;
   if(result.fields.choice&&result.context_action==='continue'){
    const choice=({'为一个目标攒钱':'save','让闲钱赚点收益':'earn','还没想好':'unsure','取消':'cancel','先不安排':'cancel'})[result.fields.choice]||result.fields.choice;
-   if(choice==='cancel'){wealth.cancelWealthGuide(n,{now:now()});finishWealth(n,'这次安排已取消，没有提交申购或存入资金。');}
-   else{wealth.wealthChoice(n,choice,{now:now(),expectedRevision:g.revision});prepareWealthSaving(n);save(n,{paint:false});}
+   if(choice==='cancel'){wealth.cancelWealthGuide(n,{now:now()});finishWealth(n,'这次安排已取消，没有提交申购或存入资金。',{reply:false});}
+   else{if(wealth.refreshWealthGuide(n,{now:now(),recall:host.readWealthRecall?.()})){save(n,{paint:false});const turn=wealth.wealthDialogue(n,{now:now()});return {text:turn?.reply||g.contextNotice||'资料已更新，请核对当前选择。',intentEvidence:turn?.evidence,companion:true,planId:g.id};}wealth.wealthChoice(n,choice,{now:now(),expectedRevision:g.revision});prepareWealthSaving(n);save(n,{paint:false});}
   }else save(n,{paint:false});
-  host.toBot?.();return {text:result.reply,speak:result.speak,card:null,taskId:null,companion:true,planId:g.id};
+  host.toBot?.();const turn=wealth.wealthDialogue(n,{now:now()});return {text:turn?.reply||result.reply,intentEvidence:turn?.evidence,speak:turn?.reply||result.speak,card:null,taskId:null,companion:true,planId:g.id,planSummary:['done','cancelled'].includes(g.stage)};
  }
- function executeWealth(){const n=clone(getState()),g=n.wealthGuide,op=wealth.wealthOperation(n,{now:now()}),permit=policy.acquireExecution(n,op,{grantId:g.grantId,executionId:op.id+':'+op.revision,now:now()});const result=wealth.postWealthReservation(n,op,permit,{now:now()});activeChallenge=null;finishWealth(n,'已买入'+result.name+' '+money(result.amountMinor)+'。');}
+ function executeWealth(){const n=clone(getState()),g=n.wealthGuide;if(wealth.refreshWealthGuide(n,{now:now(),recall:host.readWealthRecall?.()})){activeChallenge=null;wealth.recordWealthReply(n,{now:now()});save(n);throw Error('资料已更新，旧确认已失效，请重新核对。');}const op=wealth.wealthOperation(n,{now:now()}),permit=policy.acquireExecution(n,op,{grantId:g.grantId,executionId:op.id+':'+op.revision,now:now()});const result=wealth.postWealthReservation(n,op,permit,{now:now()});activeChallenge=null;finishWealth(n,'已买入'+result.name+' '+money(result.amountMinor)+'。');}
  function advanceRideReminder(){const rows=Object.values(getState().rideReminders||{}).filter(r=>r.status==='scheduled'&&r.due>now()).sort((a,b)=>a.due-b.due);if(!rows.length)throw Error('请先确认顺风车和出发提醒');clock.set(new Date(rows[0].due).toISOString());reminderTick();save();host.toBot?.();}
  function reminderTick(){const n=clone(getState());reconcileRideReminders(n,manager.snapshot().plans,{now:now()});const before=JSON.stringify(n.rideReminders),due=tickRideReminders(n,{now:now()});if(before===JSON.stringify(n.rideReminders)&&!due.length)return false;save(n,{paint:false});for(const r of due)append('还有一小时出发：从'+r.origin+'到'+r.destination+'，记得准备出门。',{planId:r.planId,planSummary:true,speak:null});return true;}
  function renderReminders(){const rows=Object.values(getState().rideReminders||{}).filter(r=>['scheduled','missed','paused','delivered'].includes(r.status));return rows.map(r=>`<section class="card companion-inline"><div class="row between"><h3>出发提醒</h3><span class="pill">${({scheduled:'已设定',missed:'已错过',paused:'已暂停',delivered:'已提醒'})[r.status]}</span></div><p>${e(displayTime(new Date(r.due).toISOString()))} 提醒出发</p><p class="companion-card-meta">${e(r.origin)} → ${e(r.destination)}</p>${r.status==='scheduled'?`<button class="quiet" data-action="ride-reminder-cancel" data-reminder="${e(r.id)}">取消提醒</button><button class="quiet" data-action="plan-edit" data-plan="${e(r.planId)}">调整行程</button>`:r.status==='missed'?'<p class="companion-card-meta">没有补发旧提醒。</p>':''}</section>`).join('');}
@@ -329,7 +331,7 @@ export function createCompanionController(host){
    policy.recordSafetySignal(next,{kind:'prompt_injection',source:{kind:'preset'}},{now:now()});title='这条内容有风险';detail=fixture;level='red';
   }else if(caseId==='safe_external_content'){
    const op={id:'external-read:'+next.companion.runId,revision:1,kind:'read',target:source.title,parameters:'{}',source:{kind:'external'}};
-   policy.acquireExecution(next,op,{executionId:op.id+':'+next.safety.epoch,now:now()});title='取货信息已核对';detail='台灯128元，11月7日16:00到店自取。当前只核对消息，没有下单或付款。';
+   policy.acquireExecution(next,op,{executionId:op.id+':'+next.safety.epoch,now:now()});title='取货信息已核对';detail='台灯128元，11月21日16:00到店自取。当前只核对消息，没有下单或付款。';
   }else if(caseId.startsWith('voice_')){
    const identity=caseId==='voice_matched'?'matched':caseId==='voice_mismatch'?'mismatched':'unknown';voiceView.identity=identity;voice.setIdentitySignal(identity);
    if(identity==='mismatched')policy.recordSafetySignal(next,{kind:'voice_mismatch',source:{kind:'preset'}},{now:now()});
@@ -400,7 +402,17 @@ export function createCompanionController(host){
  function clearVoiceInput(){voiceView.buffer=[];voiceView.interim='';voiceView.confirmationRequest=null;voiceView.armed=null;voiceView.listening=false;voice?.stopListening();voice?.cancel();}
  async function handleSubmit(event){
   const form=event.target;
-  if(form.id==='wealth-amount-form'){event.preventDefault?.();const n=clone(getState()),g=n.wealthGuide;try{wealth.wealthChoice(n,String(Math.round(Number(new FormData(form).get('amount'))*100)),{now:now(),expectedRevision:Number(form.dataset.revision)});prepareWealthSaving(n);}catch(error){if(g)g.error=error.message;}save(n);host.onInlineUpdated?.();return true;}
+  if(form.id==='wealth-amount-form'){
+   event.preventDefault?.();const n=clone(getState()),g=n.wealthGuide;
+   try{
+    if(wealth.refreshWealthGuide(n,{now:now(),recall:host.readWealthRecall?.()})){wealth.recordWealthReply(n,{now:now()});save(n);host.onInlineUpdated?.();return true;}
+    const value=wealth.parseWealthAmount(new FormData(form).get('amount'));
+    wealth.wealthChoice(n,value,{now:now(),expectedRevision:Number(form.dataset.revision)});
+    n.messages.push({id:crypto.randomUUID(),role:'user',text:money(Number(value)),planId:g.id});
+    prepareWealthSaving(n);wealth.recordWealthReply(n,{now:now()});
+   }catch(error){if(g)g.error=error.message;}
+   save(n);host.onInlineUpdated?.();return true;
+  }
   if(form.id==='savings-budget-form'){
    event.preventDefault?.();const n=clone(getState()),c=n.savingsCoach;
    try{if(Number(form.dataset.revision)!==c?.revision)throw Error('预算已更新，请重新核对');const patch=readModelForm(form),op=savings.editedBudgetOperation(n,c,patch);savings.applyEditedBudget(n,c,patch,{permit:savingsPermit(n,op),now:now()});}catch(error){if(c)c.error=error.message;}
@@ -461,9 +473,11 @@ export function createCompanionController(host){
    const n=clone(getState()),g=n.wealthGuide;if(!g||Number(button.dataset.revision)!==g.revision)throw Error('方案已变化，请核对当前卡片');
    try{
     if(action==='wealth-cancel'){wealth.cancelWealthGuide(n,{now:now()});n.savingsEditor=null;activeChallenge=null;finishWealth(n,'这次安排已取消，没有提交申购或存入资金。');return true;}
-    if(action==='wealth-choice'){g.error=null;n.messages.push({id:crypto.randomUUID(),role:'user',text:button.textContent?.trim()||button.dataset.value,planId:g.id});wealth.wealthChoice(n,button.dataset.value,{now:now(),expectedRevision:g.revision});prepareWealthSaving(n);save(n);host.onInlineUpdated?.();return true;}
-    if(action==='wealth-save'){if(g.stage!=='saving_confirm')throw Error('请先核对储蓄计划');const editor=n.savingsEditor;if(savings.refreshSavingsStart(n,editor,{now:now()})){save(n);return true;}const op=savings.savingsPlanOperation(n,editor,{now:now()});const result=savings.applySavingsPlan(n,editor,{permit:savingsPermit(n,op),now:now()});g.stage='done';n.savingsEditor=null;finishWealth(n,'储蓄计划已设定：每天'+money(g.fields.daily_minor)+'，目标'+money(g.fields.target_minor)+'。尚未存入资金。');return true;}
-    if(action==='wealth-confirm'){const op=wealth.wealthOperation(n,{now:now()}),grant=policy.authorizeSafety(n,op,{source:USER,now:now(),expiresAt:g.expiresAt});g.grantId=grant.grantId;g.stage='verifying';activeChallenge={...policy.beginChallenge(n,op,{grantId:grant.grantId,now:now()}),wealth:true};save(n);return true;}
+    if(wealth.refreshWealthGuide(n,{now:now(),recall:host.readWealthRecall?.()})){activeChallenge=null;wealth.recordWealthReply(n,{now:now()});save(n);host.onInlineUpdated?.();return true;}
+    if(action==='wealth-choice'){g.error=null;n.messages.push({id:crypto.randomUUID(),role:'user',text:button.textContent?.trim()||button.dataset.value,planId:g.id});wealth.wealthChoice(n,button.dataset.value,{now:now(),expectedRevision:g.revision});prepareWealthSaving(n);if(g.stage==='cancelled'){finishWealth(n,g.completionText||'这次先不安排，钱没有动。');return true;}wealth.recordWealthReply(n,{now:now()});save(n);host.onInlineUpdated?.();return true;}
+    if(action==='wealth-keep-plan'){if(g.stage!=='existing_goal')throw Error('请核对当前计划');g.stage='done';finishWealth(n,'已保留现有'+g.fields.goal+'储蓄计划，没有重复创建或存入资金。可在财务页查看进度和调整。');return true;}
+    if(action==='wealth-save'){wealth.validateWealthSaving(n,{now:now()});const editor=n.savingsEditor;if(savings.refreshSavingsStart(n,editor,{now:now()})){save(n);return true;}const op=savings.savingsPlanOperation(n,editor,{now:now()});const result=savings.applySavingsPlan(n,editor,{permit:savingsPermit(n,op),now:now()});if(g.memoryRecall){const jar=n.savingsJars[result.id];jar.intent_goal=g.fields.goal;jar.intent_persona=g.memoryRecall.persona;jar.historical_saved_minor=intentFacts(g,{now:now()}).progress;}g.stage='done';n.savingsEditor=null;finishWealth(n,g.memoryRecall?g.fields.goal+'计划已设定，从'+editor.fields.start_date+'开始每天存 '+money(g.fields.daily_minor)+'，本次再攒 '+money(g.fields.target_minor)+'。进度见下方储蓄罐，尚未发生新存款。':'储蓄计划已设定：每天'+money(g.fields.daily_minor)+'，目标'+money(g.fields.target_minor)+'。尚未存入资金。',{savingsSnapshot:g.memoryRecall?n.savingsJars[result.id]:null});return true;}
+    if(action==='wealth-confirm'){const op=wealth.wealthOperation(n,{now:now()}),grant=policy.authorizeSafety(n,op,{source:USER,now:now(),expiresAt:g.expiresAt});g.grantId=grant.grantId;g.stage='verifying';activeChallenge={...policy.beginChallenge(n,op,{grantId:grant.grantId,now:now()}),wealth:true};wealth.recordWealthReply(n,{now:now()});save(n);return true;}
    }catch(error){g.error=error.message;save(n);}return true;
   }
 
@@ -563,9 +577,10 @@ export function createCompanionController(host){
   if(action==='safety-challenge-cancel'){
    const next=clone(getState()),challenge=policy.getSafetyChallenge(next,button.dataset.challenge);
    if(!activeChallenge||activeChallenge.id!==button.dataset.challenge)return true;
-   if(activeChallenge?.wealth&&next.wealthGuide){next.wealthGuide.stage='confirm';delete next.wealthGuide.grantId;}
+   const wealthGuide=activeChallenge?.wealth?next.wealthGuide:null;
+   if(wealthGuide){wealthGuide.stage='confirm';wealthGuide.revision++;delete wealthGuide.grantId;}
    if(challenge?.operationId){policy.revokeOperation(next,challenge.operationId,{reason:'verification_cancelled',now:now()});const t=next.tasks.find(t=>t.id===challenge.operationId);if(t){t.status='permission';t.granted=false;t.approved=null;t.safetyChallengeId=null;}if(next.companion.paper?.operation?.id===challenge.operationId)next.companion.paper.status='review';if(next.companion.recipient?.id===challenge.operationId)next.companion.recipient.status='review';}
-   activeChallenge=null;save(next);append('本次验证已取消，没有执行操作。',{kind:'safety_status'});return true;
+   activeChallenge=null;save(next);append('本次验证已取消，没有执行操作。',{kind:'safety_status',...(wealthGuide?{planId:wealthGuide.id,intentEvidence:wealth.wealthDialogue(next,{now:now()})?.evidence}:{})});return true;
   }
   if(action==='demo-password-fail')return false;
   if(action==='demo-scam'){host.onScamCase?.();append('该收款人被多人标记为信用不佳，已停止转账。身份验证也不能消除这个风险。',{origin:'preset',kind:'safety_status'});return true;}
@@ -573,9 +588,9 @@ export function createCompanionController(host){
   if(action==='demo-voice-mismatch'){voiceView.identity='mismatched';voice.setIdentitySignal('mismatched');recordSignal('voice_mismatch');append('声音信号不一致，敏感操作需要独立本人验证，不能仅凭语音继续。',{origin:'preset',kind:'safety_status'});return true;}
   if(action==='demo-rent'){const plan=manager.ingestRentEmail();focusPlan(plan);append('陈先生发来11月房租提醒。我按已保存的租约核对了3500元，请确认是否只处理这一个月。',{kind:'reminder'});return true;}
   if(action==='demo-subscription'){if(now()>Date.parse('2026-11-25T01:00:00Z'))throw Error('请先重新开始案例，再查看本期提醒。');clock.set('2026-11-25T01:00:00Z');const plan=manager.scanSubscription();if(plan){focusPlan(plan);const tagged=clone(getState());const message=tagged.messages.find(m=>m.id===originTurnId);if(message)message.planId=plan.id;save(tagged,{paint:false});}append('云音乐会员将在28日续费。可以保留本期权益，只核对下一次续费。',{kind:'reminder'});return true;}
-  if(action==='demo-birthday'){userMessage('女友11月9日生日，预算1200元，安排上海的晚餐和蛋糕，13:14转账520元。');const plan=manager.createBirthdayPlan(fixtures.birthday);focusPlan(plan);append('我把晚餐、蛋糕联系、50元定金和生日当天的520元分开安排。请核对范围，再授权这一次。',{origin:'preset',kind:'confirmation_summary'});return true;}
+  if(action==='demo-birthday'){userMessage('女友11月18日生日，预算1200元，安排上海的晚餐和蛋糕，13:14转账520元。');const plan=manager.createBirthdayPlan(fixtures.birthday);focusPlan(plan);append('我把晚餐、蛋糕联系、50元定金和生日当天的520元分开安排。请核对范围，再授权这一次。',{origin:'preset',kind:'confirmation_summary'});return true;}
   if(action==='demo-ambiguous'){resetView();host.onAmbiguousCase?.();return true;}
-  if(action==='demo-clock-birthday'||action==='demo-clock-subscription'){const target=action==='demo-clock-birthday'?'2026-11-09T05:14:00Z':'2026-11-28T01:00:00Z';if(now()>Date.parse(target))throw Error('演示时钟只能向前推进，请先复位案例。');clock.set(action==='demo-clock-birthday'?'2026-11-09T05:14:00Z':'2026-11-28T01:00:00Z');await manager.tick({execute:true});save();append('演示时钟已推进，到期步骤已重新检查授权与安全状态。',{origin:'preset',kind:'safety_status'});return true;}
+  if(action==='demo-clock-birthday'||action==='demo-clock-subscription'){const target=action==='demo-clock-birthday'?BIRTHDAY_CLOCK_AT:'2026-11-28T01:00:00Z';if(now()>Date.parse(target))throw Error('演示时钟只能向前推进，请先复位案例。');clock.set(action==='demo-clock-birthday'?BIRTHDAY_CLOCK_AT:'2026-11-28T01:00:00Z');await manager.tick({execute:true});save();append('演示时钟已推进，到期步骤已重新检查授权与安全状态。',{origin:'preset',kind:'safety_status'});return true;}
   if(action==='demo-reset'){
    if(getState().safety.locked)throw Error('请先完成恢复验证，再复位案例。');
    voice.cancel();voice.stopListening();voiceView.identity='unknown';voice.setIdentitySignal('unknown');manager.reset();clock.set(START);const next=clone(getState()),oldRun=next.companion.runId;

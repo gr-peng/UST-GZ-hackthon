@@ -1,7 +1,8 @@
 // URL and reset rules shared by the showcase and regression tests.
+import {STORY_DATE} from './demo-calendar.mjs';
 export function appStateKey(session=''){
  const namespace=String(session).replace(/[^a-zA-Z0-9_-]/g,'').slice(0,30);
- return 'finpilot-companion-v1'+(session?'-'+namespace:'');
+ return 'finpilot-companion-'+STORY_DATE.replaceAll('-','')+(session?'-'+namespace:'');
 }
 export function appURL(href,route){
  const source=new URL(href),url=new URL('./',source);

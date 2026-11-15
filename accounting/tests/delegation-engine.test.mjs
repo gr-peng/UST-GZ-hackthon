@@ -47,14 +47,14 @@ test('birthday dependencies run in order and the 520 transfer only becomes due a
  const state=setup([
   node('restaurant','book_restaurant',{target:'本地餐厅'}),node('cake'),
   node('message','message',{dependsOn:['cake']}),node('deposit','deposit',{amountMinor:12800,dependsOn:['message']}),
-  node('gift','transfer',{target:'女友',amountMinor:52000,dependsOn:['restaurant','deposit'],scheduledAt:'2026-11-09T13:14:00+08:00'})
+  node('gift','transfer',{target:'女友',amountMinor:52000,dependsOn:['restaurant','deposit'],scheduledAt:'2026-11-18T13:14:00+08:00'})
  ]);
  assert.deepEqual(readyNodes(state,'birthday').map(n=>n.id),['restaurant','cake']);
  assert.throws(()=>startNode(state,'birthday','gift',permission(state,'gift')),code('not_ready'));
  complete(state,'cake');assert.deepEqual(readyNodes(state,'birthday').map(n=>n.id),['restaurant','message']);
  complete(state,'restaurant');complete(state,'message');complete(state,'deposit');
- advanceDemoClock(state,'2026-11-09T13:13:59+08:00');assert.deepEqual(readyNodes(state,'birthday'),[]);
- advanceDemoClock(state,'2026-11-09T13:14:00+08:00');
+ advanceDemoClock(state,'2026-11-18T13:13:59+08:00');assert.deepEqual(readyNodes(state,'birthday'),[]);
+ advanceDemoClock(state,'2026-11-18T13:14:00+08:00');
  const due=readyNodes(state,'birthday');assert.equal(due.length,1);assert.equal(due[0].operation.amountMinor,52000);assert.equal(due[0].status,'awaiting_consent');
  const done=complete(state,'gift');assert.equal(done.result.source,'local_adapter');assert.equal(done.result.external,false);
  assert.equal(getDelegation(state,'birthday').status,'completed');assert.equal(state.balance,50000);assert.deepEqual(state.ledger,[]);
@@ -97,7 +97,7 @@ test('adapter source, receipt and effect must match the exact permitted operatio
 });
 
 test('pause invalidates in-flight callbacks and scheduled nodes; resume does not replay or bypass review',()=>{
- const state=setup([node('cake'),node('gift','transfer',{target:'女友',amountMinor:52000,scheduledAt:'2026-11-09T13:14:00+08:00',dependsOn:['cake']})]);
+ const state=setup([node('cake'),node('gift','transfer',{target:'女友',amountMinor:52000,scheduledAt:'2026-11-18T13:14:00+08:00',dependsOn:['cake']})]);
  const options=permission(state,'cake'),started=startNode(state,'birthday','cake',options),result=runLocalDemoAdapter(started.ticket.operation);
  pauseAllDelegations(state,{reason:'安全锁定',epoch:2});
  assert.ok(getDelegation(state,'birthday').nodes.every(n=>n.status==='paused'));
@@ -158,12 +158,12 @@ test('monthly 28th reminders use persistent occurrence IDs and never create recu
 
 test('the demo clock requires a timezone and only explicit reset can move backwards',()=>{
  const state=setup();assert.equal(state.delegations.clockISO,DEFAULT_DEMO_CLOCK);
- assert.throws(()=>advanceDemoClock(state,'2026-11-09T13:14:00'),code('invalid_clock'));
+ assert.throws(()=>advanceDemoClock(state,'2026-11-18T13:14:00'),code('invalid_clock'));
  assert.throws(()=>advanceDemoClock(state,'2026-02-30T12:00:00+08:00'),code('invalid_clock'));
- advanceDemoClock(state,'2026-11-09T13:14:00+08:00');
+ advanceDemoClock(state,'2026-11-18T13:14:00+08:00');
  assert.throws(()=>advanceDemoClock(state,DEFAULT_DEMO_CLOCK),code('clock_backwards'));
  advanceDemoClock(state,DEFAULT_DEMO_CLOCK,{reset:true});assert.equal(state.delegations.clockISO,DEFAULT_DEMO_CLOCK);
- assert.throws(()=>advanceDemoClock(state,'2026-11-09T13:14:00+08:00',{source:{kind:'external'}}),code('user_required'));
+ assert.throws(()=>advanceDemoClock(state,'2026-11-18T13:14:00+08:00',{source:{kind:'external'}}),code('user_required'));
 });
 
 test('booking compensation is a separate permitted action; messages and transfers cannot magically undo',()=>{
@@ -192,7 +192,7 @@ test('parameter edits reject old grants, while human handoff never autoauthorize
 });
 
 function proactiveContext(extra={}){
- return {phase:'before_execute',now:'2026-11-02T09:00:00+08:00',mode:'local_demo',plan_id:'birthday-bridge',revision:1,
+ return {phase:'before_execute',now:'2026-11-15T09:00:00+08:00',mode:'local_demo',plan_id:'birthday-bridge',revision:1,
   source:{type:'user_request',trust:'user_intent'},step:{id:'cake.deposit',title:'支付蛋糕定金',app:'payments_demo',operation:'pay_deposit',
    payload:{recipient_id:'cake-shop',amount_minor:80000,currency:'CNY',source_account:'living_1608'},dependencies:[],scheduled_for:null,confirmation_required:true,attempts:0},...extra};
 }
@@ -200,7 +200,7 @@ function bridgeHost({effect,acceptReplay}={}){
  let state={balance:50000,ledger:[]};policy.ensureSafety(state);
  const bridge=createProactiveSafetyBridge({policy,getState:()=>state,persist:next=>{state=next;},
   getGrantId(operation,context,draft){return Object.values(draft.safety.grants).find(g=>g.operationId===operation.id&&g.snapshot.parameters===operation.parameters&&g.status==='ready')?.id;},
-  onCommitEffect:effect||((draft,{operation,result,permit})=>{draft.balance-=operation.amountMinor/100;draft.ledger.push({id:'local:'+permit.executionId,kind:operation.kind,date:'2026-11-02',amountMinor:operation.amountMinor,direction:'expense',receipt:result.receipt_id});}),
+  onCommitEffect:effect||((draft,{operation,result,permit})=>{draft.balance-=operation.amountMinor/100;draft.ledger.push({id:'local:'+permit.executionId,kind:operation.kind,date:'2026-11-15',amountMinor:operation.amountMinor,direction:'expense',receipt:result.receipt_id});}),
   ...(acceptReplay?{acceptReplay}:{})});
  const authorize=context=>policy.authorizeSafety(state,proactiveSafetyOperation(context),{source:user,now:Date.parse(context.now)});
  return {bridge,getState:()=>state,authorize};
@@ -274,17 +274,17 @@ test('failed proactive adapters count as tool failures and three explicit attemp
 
 test('registering a future birthday schedule is permitted now without executing its future transfer',async()=>{
  const host=bridgeHost({effect:()=>{}}),base=proactiveContext(),context={...base,step:{...base.step,id:'birthday.schedule',app:'calendar_demo',operation:'schedule_local_task',
-  payload:{recipient_id:'partner',amount_minor:52000,currency:'CNY',source_account:'living_1608',scheduled_for:'2026-11-09T13:14:00+08:00',clock_mode:'explicit_virtual_demo'}}};
- const operation=proactiveSafetyOperation(context);assert.equal(operation.scheduledAt,null);assert.match(operation.parameters,/2026-11-09T13:14:00/);
+  payload:{recipient_id:'partner',amount_minor:52000,currency:'CNY',source_account:'living_1608',scheduled_for:'2026-11-18T13:14:00+08:00',clock_mode:'explicit_virtual_demo'}}};
+ const operation=proactiveSafetyOperation(context);assert.equal(operation.scheduledAt,null);assert.match(operation.parameters,/2026-11-18T13:14:00/);
  host.authorize(context);assert.equal(host.bridge(context).decision,'allow');
  assert.equal(host.bridge(afterContext(context,await bridgeResult(context))).decision,'allow');
  assert.equal(host.getState().balance,50000);assert.deepEqual(host.getState().ledger,[]);
  const transfer={...context,step:{...context.step,operation:'transfer',scheduled_for:context.step.payload.scheduled_for}};
- assert.equal(proactiveSafetyOperation(transfer).scheduledAt,'2026-11-09T13:14:00+08:00');
+ assert.equal(proactiveSafetyOperation(transfer).scheduledAt,'2026-11-18T13:14:00+08:00');
 });
 
 async function interruptedProactiveCommit(){
- const clock=createDemoClock('2026-11-02T09:00:00+08:00'),demo=createProactiveDemo({clock,safetyGate:()=>({decision:'allow',risk:'yellow',evaluation_id:'test-fixture'})});
+ const clock=createDemoClock('2026-11-15T09:00:00+08:00'),demo=createProactiveDemo({clock,safetyGate:()=>({decision:'allow',risk:'yellow',evaluation_id:'test-fixture'})});
  const plan=demo.createBirthdayPlan(PROACTIVE_DEMO_FIXTURES.birthday),node=plan.steps.find(n=>n.id==='cake.deposit');
  const context={phase:'before_execute',now:clock.now(),mode:'local_demo',plan_id:plan.id,revision:plan.revision,source:plan.source,step:{...node,attempts:0}};
  const host=bridgeHost();host.authorize(context);assert.equal(host.bridge(context).decision,'allow');

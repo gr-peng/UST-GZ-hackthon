@@ -74,10 +74,21 @@ test('pending UI confirmation reads current safety and cannot resume a locked li
  const prior=globalThis.document;globalThis.document={querySelector:()=>null};
  try{
   const s=fresh();pause(s,'living',true);let saves=0;
-  const ui=createBankCards({getState:()=>s,save:()=>saves++,esc:x=>x,money:x=>String(x),icon:()=>'',onLedger:()=>{}});
+  const ui=createBankCards({features:{cardApplications:true,creditLimitAdjustment:true},getState:()=>s,save:()=>saves++,esc:x=>x,money:x=>String(x),icon:()=>'',onLedger:()=>{}});
   ui.actions['bank-card-select']({dataset:{card:'living'}});ui.actions['bank-card-pause']();
   const version=ui.html().match(/data-version="([^"]+)"/)[1];safety(s).locked=true;safety(s).epoch++;const before=structuredClone(s);
   assert.throws(()=>ui.actions['bank-card-confirm']({dataset:{card:'living',version}}),e=>e.code==='locked');
   assert.equal(saves,0);assert.equal(s.cardLocked,true);assert.deepEqual(s,before);
  }finally{if(prior===undefined)delete globalThis.document;else globalThis.document=prior;}
+});
+
+test('default product hides issuing and limit changes while showing credit card without issuing it',()=>{
+ const state=fresh(),before=structuredClone(state);
+ const ui=createBankCards({getState:()=>state,save(){throw Error('unexpected write');},esc:String,money:String,icon:()=>'',onLedger(){}});
+ const html=ui.html();
+ assert.match(html,/3张/);assert.match(html,/bank-card-credit/);
+ assert.doesNotMatch(html,/data-action="bank-card-apply"|data-action="bank-card-limit"|bank-product-panel/);
+ assert.throws(()=>ui.actions['bank-card-apply'](),/入口已隐藏/);
+ assert.throws(()=>ui.actions['bank-card-limit'](),/入口已隐藏/);
+ assert.deepEqual(state,before);
 });

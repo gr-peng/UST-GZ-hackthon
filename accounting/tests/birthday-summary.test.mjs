@@ -3,11 +3,11 @@ import assert from 'node:assert/strict';
 import {birthdayPaymentSummary,createCompanionController} from '../web/companion-controller.mjs';
 import {fresh} from '../web/engine.mjs';
 
-const NOW=Date.parse('2026-11-02T01:00:00Z');
+const NOW=Date.parse('2026-11-15T01:00:00Z');
 function plan(deposit='needs_confirmation',transfer='needs_confirmation',status='needs_confirmation'){
  return {kind:'birthday',status,steps:[
   {id:'cake.deposit',status:deposit,payload:{amount_minor:5000},receipt_id:deposit==='succeeded'?'DEMO:deposit':null},
-  {id:'birthday.transfer',status:transfer,payload:{amount_minor:52000},scheduled_for:'2026-11-09T13:14:00+08:00',receipt_id:transfer==='succeeded'?'DEMO:transfer':null}
+  {id:'birthday.transfer',status:transfer,payload:{amount_minor:52000},scheduled_for:'2026-11-18T13:14:00+08:00',receipt_id:transfer==='succeeded'?'DEMO:transfer':null}
  ]};
 }
 const summary=p=>birthdayPaymentSummary(p,{now:NOW});
@@ -24,11 +24,11 @@ test('a started deposit is processing rather than paid',()=>{
  const text=summary(plan('started','pending','scheduled'));assert.match(text,/定金 ¥50\.00 处理中/);assert.match(text,/尚无完成回执/);assert.doesNotMatch(text,/已付/);
 });
 test('a receipted deposit and future pending transfer show the exact scheduled wait',()=>{
- const text=summary(plan('succeeded','pending','scheduled'));assert.match(text,/已付定金 ¥50\.00/);assert.match(text,/转账 ¥520\.00 等待 2026\/11\/9 13:14:00/);assert.doesNotMatch(text,/已转账/);
+ const text=summary(plan('succeeded','pending','scheduled'));assert.match(text,/已付定金 ¥50\.00/);assert.match(text,/转账 ¥520\.00 等待 2026\/11\/18 13:14:00/);assert.doesNotMatch(text,/已转账/);
 });
 test('an overdue or unconfirmed transfer asks for review rather than claiming a future authorized payment',()=>{
  const pending=plan('succeeded','pending','scheduled');
- assert.match(birthdayPaymentSummary(pending,{now:Date.parse('2026-11-09T05:15:00Z')}),/转账 ¥520\.00 待重新核对/);
+ assert.match(birthdayPaymentSummary(pending,{now:Date.parse('2026-11-18T05:15:00Z')}),/转账 ¥520\.00 待重新核对/);
  assert.match(summary(plan('succeeded','needs_confirmation')),/待重新核对/);
 });
 test('completed birthday reports both receipts and the actual total of 570 yuan',()=>{

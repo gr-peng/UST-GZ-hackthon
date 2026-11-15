@@ -44,9 +44,9 @@ function harness({context=new Context(),wireFactory=null,responseStatus=200,cont
 }
 
 test('numeric speech reaches the wire normalized before PCM streaming and replays cached audio',async()=>{
- const h=harness();const text='账户1608,11月9日16:00,¥520.00。';
+ const h=harness();const text='账户1608,11月18日16:00,¥520.00。';
  await h.adapter.speak(text,{requestId:'numbers-first'});
- assert.equal(JSON.parse(h.calls[0].request.body).speak,'账户一六零八,十一月九日下午四点,五百二十元。');
+ assert.equal(JSON.parse(h.calls[0].request.body).speak,'账户一六零八,十一月十八日下午四点,五百二十元。');
  await h.adapter.speak(text,{requestId:'numbers-replay'});assert.equal(h.calls.length,1);
  h.adapter.clearCache();await h.adapter.speak(text,{requestId:'numbers-after-reset'});assert.equal(h.calls.length,2);
 });

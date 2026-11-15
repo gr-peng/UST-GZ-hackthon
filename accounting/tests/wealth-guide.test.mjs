@@ -4,7 +4,7 @@ import {fresh} from '../web/engine.mjs';
 import * as w from '../web/wealth-guide.mjs';
 import * as p from '../web/safety-policy.mjs';
 import {resetDemoOnBoot} from '../web/demo-boot.mjs';
-const NOW=Date.parse('2026-11-02T01:00:00Z'),USER={kind:'user',method:'click'};
+const NOW=Date.parse('2026-11-15T01:00:00Z'),USER={kind:'user',method:'click'};
 function state(){const s=fresh();p.ensureSafety(s);w.startWealthGuide(s,{now:NOW,id:'test-wealth'});return s;}
 function pick(s,v){return w.wealthChoice(s,String(v),{now:NOW,expectedRevision:s.wealthGuide.revision});}
 function confirmable(){const s=state();for(const v of ['earn','旅行',500000,'半年','了解基金或理财','可接受小幅亏损','收入稳定但有压力','demo-flex',300000])pick(s,v);return s;}

@@ -126,7 +126,7 @@ class ConnectionTests(unittest.TestCase):
         app = self.apps[0][0]
         _, result = self.configure(0)
         self.assertNotIn('key', result)
-        for referer in ('/showcase.html?session=judge', '/?app=1&session=judge'):
+        for referer in ('/showcase.html?session=sample', '/?app=1&session=sample'):
             status, headers, html = self.request(0, referer)
             self.assertEqual(status, 200)
             self.assertIn("frame-ancestors 'self'", headers['Content-Security-Policy'])

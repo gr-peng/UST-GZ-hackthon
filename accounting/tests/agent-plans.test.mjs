@@ -6,7 +6,7 @@ import {parameterFingerprint} from '../web/task-parameters.mjs';
 import {executeLocalTask} from '../web/local-executor.mjs';
 import {draftWithInputs,renderAgentCard,renderActiveDraft} from '../web/agent-cards.mjs';
 const proposal=fields=>({status:'propose',scenario:'transfer',reply:'已整理转账方案，请核对。',query:null,fields,missing:[],mode:'create',task_id:null});
-const transferFields={amount_minor:200000,payee_id:'mom',source_account:'salary_0826',currency:'CNY',scheduled_date:'2026-11-02',purpose:'family'};
+const transferFields={amount_minor:200000,payee_id:'mom',source_account:'salary_0826',currency:'CNY',scheduled_date:'2026-11-15',purpose:'family'};
 
 test('existing unrecognized-card entry clarifies transaction before scoped permission and local protection',()=>{
  const s=fresh(),n=s.ledger.length;const context={originTurnId:'card-clarify',agentRunId:'card-run'};

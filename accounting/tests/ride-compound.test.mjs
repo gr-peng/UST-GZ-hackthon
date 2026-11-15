@@ -8,10 +8,10 @@ import * as policy from '../web/safety-policy.mjs';
 import {fresh} from '../web/engine.mjs';
 const copy=x=>structuredClone(x),USER={kind:'user',method:'click'};
 const fields=()=>({items:[{id:'item-1',kind:'sms',contact_id:'mom',message:'妈妈，周六我回家吃饭。'},
- {id:'item-2',kind:'ride',date:'2026-11-07',departure_time:'16:00',origin:'学校东门',destination:'锦绣小区南门',fare_minor:8000,source_account:'living_1608'}]});
+ {id:'item-2',kind:'ride',date:'2026-11-21',departure_time:'16:00',origin:'学校东门',destination:'锦绣小区南门',fare_minor:8000,source_account:'living_1608'}]});
 function setup(hook,snapshot,existingState){
  let state=existingState?copy(existingState):fresh();policy.ensureSafety(state);state.rideTest??={grants:{},effects:[]};
- const clock=createDemoClock('2026-11-02T01:00:00Z'),raw=createLocalDemoAdapters(),calls=[];
+ const clock=createDemoClock('2026-11-15T01:00:00Z'),raw=createLocalDemoAdapters(),calls=[];
  const bridge=createProactiveSafetyBridge({policy,getState:()=>state,persist:s=>{state=copy(s);},getGrantId:op=>state.rideTest.grants[op.id],acceptReplay:()=>true,
   onCommitEffect(next,{operation,result,context}){assert.equal(operation.amountMinor,0);const key=operation.id+':v'+operation.revision;assert.ok(!next.rideTest.effects.some(x=>x.key===key));next.rideTest.effects.push({key,operation:context.step.operation,receipt:result.receipt_id,payload:copy(context.step.payload)});}});
  const manager=createProactiveDemo({clock,snapshot,safetyGate:bridge,adapters:{mode:'local_demo',reset:()=>raw.reset(),execute:async input=>{calls.push(copy(input));return hook?hook(input,raw):raw.execute(input);}}});
@@ -22,7 +22,7 @@ function setup(hook,snapshot,existingState){
 test('ride slots require date, time, route, fare cap and account without dropping the SMS',()=>{
  const incomplete={items:[fields().items[0],{id:'item-2',kind:'ride'}]};
  assert.deepEqual(compoundMissing(incomplete),['items.1.date','items.1.departure_time','items.1.origin','items.1.destination','items.1.fare_minor','items.1.source_account']);
- const filled=mergeCompoundFields(incomplete,{'items.1.date':'2026-11-07','items.1.departure_time':'16:00','items.1.origin':'学校东门','items.1.destination':'锦绣小区南门','items.1.fare_minor':8000,'items.1.source_account':'living_1608'});
+ const filled=mergeCompoundFields(incomplete,{'items.1.date':'2026-11-21','items.1.departure_time':'16:00','items.1.origin':'学校东门','items.1.destination':'锦绣小区南门','items.1.fare_minor':8000,'items.1.source_account':'living_1608'});
  assert.deepEqual(filled,fields());assert.deepEqual(compoundMissing(filled),[]);
 });
 test('ride input is bounded inert data; invalid dates, fees, locations and authority fields fail',()=>{
@@ -77,6 +77,6 @@ test('restored completed SMS does not silently authorize the remaining ride',asy
 });
 test('ride confirmation exposes route, time, cap and no-payment boundary',()=>{
  const h=setup(),p=h.manager.createCompoundPlan(fields()),node=p.steps[1],html=stepDetails(node,{esc:x=>String(x),money:n=>'¥'+n/100,target:'预约回家顺风车'});
- for(const text of ['学校东门','锦绣小区南门','2026-11-07 16:00','车费上限','¥80','确认预约，不扣车费。','费用来源'])assert.ok(html.includes(text));
+ for(const text of ['学校东门','锦绣小区南门','2026-11-21 16:00','车费上限','¥80','确认预约，不扣车费。','费用来源'])assert.ok(html.includes(text));
  assert.equal(PLAN_ACTIONS.reserve_ride.confirm,'确认预约');assert.match(PLAN_ACTIONS.reserve_ride.done,/未支付/);
 });

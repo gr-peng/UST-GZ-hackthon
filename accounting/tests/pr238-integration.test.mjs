@@ -8,7 +8,7 @@ import {companionEnvelope} from '../web/companion-contract.mjs';
 test('large amounts reach risk or explicit confirmation without executing',()=>{
  for(const risk of [false,true]){
   const s=fresh(),cash=s.balance,rows=s.ledger.length;
-  const output=applyAgentResult(s,{status:risk?'blocked':'propose',scenario:risk?'risk_transfer':'transfer',reply:'请核对。',mode:'create',fields:{amount_minor:3000000,payee_id:risk?'unknown':'mom',source_account:'salary_0826',currency:'CNY',scheduled_date:'2026-11-02'}},buildAgentFacts(s),{originTurnId:'large',userText:risk?'转入安全账户':'给妈妈转30000元',agentRunId:'test'});
+  const output=applyAgentResult(s,{status:risk?'blocked':'propose',scenario:risk?'risk_transfer':'transfer',reply:'请核对。',mode:'create',fields:{amount_minor:3000000,payee_id:risk?'unknown':'mom',source_account:'salary_0826',currency:'CNY',scheduled_date:'2026-11-15'}},buildAgentFacts(s),{originTurnId:'large',userText:risk?'转入安全账户':'给妈妈转30000元',agentRunId:'test'});
   const task=s.tasks.find(t=>t.id===output.taskId);assert.equal(task.status,risk?'blocked':'permission');assert.equal(task.granted,false);assert.equal(s.balance,cash);assert.equal(s.ledger.length,rows);
  }
 });

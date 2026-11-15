@@ -16,7 +16,7 @@ class R14Contract(unittest.TestCase):
         c['analysis']['ledger']=[{'private':'not allowed'}]
         with self.assertRaises(ContractError):request_messages(payload)
     def test_ride_and_sms_both_survive_validation(self):
-        fields={'items':[{'id':'item-1','kind':'sms','contact_id':'mom','message':'周末回家吃饭。'},{'id':'item-2','kind':'ride','date':'2026-11-07','departure_time':'17:00','origin':'学校南门','destination':'家小区北门','fare_minor':8000,'source_account':'living_1608'}]}
+        fields={'items':[{'id':'item-1','kind':'sms','contact_id':'mom','message':'周末回家吃饭。'},{'id':'item-2','kind':'ride','date':'2026-11-21','departure_time':'17:00','origin':'学校南门','destination':'家小区北门','fare_minor':8000,'source_account':'living_1608'}]}
         r=validate_result({'scenario':'compound','status':'propose','reply':'先核对短信，再安排车辆。','fields':fields,'missing':[],'actions':[{'type':'prepare_compound'}],'cards':[{'type':'compound_plan'}]})
         self.assertEqual(len(r['fields']['items']),2)
         self.assertEqual(r['fields']['items'][1]['fare_minor'],8000)

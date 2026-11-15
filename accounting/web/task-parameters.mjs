@@ -1,15 +1,16 @@
+import {STORY_DATE} from './demo-calendar.mjs';
 import {SUBSCRIPTIONS} from './agent-tools.mjs';
 import {MAX_AMOUNT_MINOR,MAX_AMOUNT_YUAN} from './limits.mjs';
 export const CONTACTS=[{id:'mom',name:'妈妈',suffix:'6821'},{id:'dad',name:'爸爸',suffix:'4382'}];
 export const SOURCES=[{id:'salary_0826',name:'工资账户',suffix:'0826'},{id:'living_1608',name:'生活账户',suffix:'1608'}];
-export function taskParameters(t){return {amount_minor:Math.round((t.amount||0)*100),cadence:t.cadence||'once',currency:t.currency||'CNY',kind:t.kind,payee_id:t.payeeId||((t.key==='salary')?'mom':null),purpose:t.purpose||null,scheduled_date:t.scheduledDate||'2026-11-02',scope:t.scope||'next_renewal',source_account:t.sourceAccount||(t.kind==='card'?'living_1608':'salary_0826'),subscription_action:t.subscriptionAction||'cancel',subscription_id:t.subscriptionId||'video',next_renewal:t.nextRenewalDate||null,subscription_revision:t.subscriptionRevision||1,target:t.target||'',risk_flags:[...(t.riskFlags||[])].sort(),...(t.kind==='card'?{transaction_ref:t.transactionRef||'unrecognized_1299'}:{})};}
+export function taskParameters(t){return {amount_minor:Math.round((t.amount||0)*100),cadence:t.cadence||'once',currency:t.currency||'CNY',kind:t.kind,payee_id:t.payeeId||((t.key==='salary')?'mom':null),purpose:t.purpose||null,scheduled_date:t.scheduledDate||STORY_DATE,scope:t.scope||'next_renewal',source_account:t.sourceAccount||(t.kind==='card'?'living_1608':'salary_0826'),subscription_action:t.subscriptionAction||'cancel',subscription_id:t.subscriptionId||'video',next_renewal:t.nextRenewalDate||null,subscription_revision:t.subscriptionRevision||1,target:t.target||'',risk_flags:[...(t.riskFlags||[])].sort(),...(t.kind==='card'?{transaction_ref:t.transactionRef||'unrecognized_1299'}:{})};}
 export const parameterFingerprint=t=>JSON.stringify(taskParameters(t));
 export function validateTaskParameters(t){
  const p=taskParameters(t);
  if(['transfer','investment','redemption','planning'].includes(t.kind)&&(!Number.isSafeInteger(p.amount_minor)||p.amount_minor<=0||p.amount_minor>MAX_AMOUNT_MINOR))throw Error('请核对有效金额');
  if(p.currency!=='CNY'||!SOURCES.some(s=>s.id===p.source_account))throw Error('请核对付款账户和币种');
  if(!/^\d{4}-\d{2}-\d{2}$/.test(p.scheduled_date)||!Number.isFinite(Date.parse(p.scheduled_date+'T00:00:00Z'))||new Date(p.scheduled_date+'T00:00:00Z').toISOString().slice(0,10)!==p.scheduled_date)throw Error('日期无效');
- if(p.scheduled_date!=='2026-11-02')throw Error('未来日期先保留为草稿，此轮只执行当天安排');
+ if(p.scheduled_date!==STORY_DATE)throw Error('未来日期先保留为草稿，此轮只执行当天安排');
  if(t.kind==='card'&&(p.transaction_ref!=='unrecognized_1299'||p.source_account!=='living_1608'))throw Error('请先核对所选交易与卡片账户');
  if(t.kind==='transfer'&&(!CONTACTS.some(c=>c.id===p.payee_id)||p.risk_flags.length))throw Error('收款人尚未核实或存在风险，不能继续转账');
  if(t.kind==='subscription'&&(!['video','cloud','music'].includes(p.subscription_id)||!['cancel','keep','downgrade'].includes(p.subscription_action)||p.scope!=='next_renewal'))throw Error('请核对订阅对象与下次续费范围');

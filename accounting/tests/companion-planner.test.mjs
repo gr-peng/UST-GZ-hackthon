@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {validateCompanionResult,companionModelContext} from '../web/companion-planner.mjs';
 
-const birthdayFields={birthday_date:'2026-11-09',budget_minor:120000,partner_id:'partner-linxia',city:'上海',source_account:'living_1608'};
+const birthdayFields={birthday_date:'2026-11-18',budget_minor:120000,partner_id:'partner-linxia',city:'上海',source_account:'living_1608'};
 const actions={birthday:'prepare_birthday',rent_reminder:'prepare_rent',subscription_reminder:'prepare_subscription',security_case:'show_security_case'};
 const cards={birthday:'birthday_plan',rent_reminder:'rent_plan',subscription_reminder:'subscription_plan',security_case:'security_notice'};
 const fields={birthday:birthdayFields,rent_reminder:{},subscription_reminder:{subscription_action:'keep'},security_case:{case_id:'reported_scam'}};
@@ -55,7 +55,7 @@ test('birthday proposal requires every explicit, valid, known parameter',()=>{
  assert.equal(validateCompanionResult(proposal('birthday',{fields:{...birthdayFields,birthday_date:'2028-02-29',budget_minor:103600}})).fields.birthday_date,'2028-02-29');
 });
 test('clarification preserves known fields and null slots, with at most five unique missing slots',()=>{
- const input=proposal('birthday',{status:'clarify',fields:{birthday_date:'2026-11-09',city:'上海',budget_minor:null},missing:['budget_minor','partner_id','source_account'],actions:[],cards:[{type:'clarification'}]});
+ const input=proposal('birthday',{status:'clarify',fields:{birthday_date:'2026-11-18',city:'上海',budget_minor:null},missing:['budget_minor','partner_id','source_account'],actions:[],cards:[{type:'clarification'}]});
  const result=validateCompanionResult(input);assert.deepEqual(result.fields,input.fields);assert.deepEqual(result.missing,input.missing);assert.equal(result.mode,'none');
  const all=validateCompanionResult({...input,fields:{},missing:Object.keys(birthdayFields)});assert.equal(all.missing.length,5);
  for(const missing of [[],['code'],['budget_minor','budget_minor'],['birthday_date','budget_minor','partner_id','city','source_account','city']])rejected({...input,missing});

@@ -6,12 +6,12 @@ import {
  failExecution,recordSafetySignal,lockSafety,invalidateSafetyEpoch,revokeOperation,getSafetyChallenge,beginRecovery,recoverSafety,auditSafety,refreshTimedFreeze,PASSWORD_FREEZE_MS,
 } from '../web/safety-policy.mjs';
 
-const NOW=Date.parse('2026-11-02T09:00:00+08:00');
+const NOW=Date.parse('2026-11-15T09:00:00+08:00');
 const USER={kind:'user',method:'click'};
 const state=()=>({ledger:[],paused:false});
 const operation=(extra={})=>({id:'transfer-one',revision:1,kind:'transfer',target:'妈妈 6821',amountMinor:50000,currency:'CNY',
- parameters:JSON.stringify({amount_minor:50000,payee_id:'mom',source_account:'salary_0826',scheduled_date:'2026-11-02'}),
- scope:{action:'transfer',account:'salary_0826',payee:'mom'},scheduledAt:'2026-11-02T09:00:00+08:00',...extra});
+ parameters:JSON.stringify({amount_minor:50000,payee_id:'mom',source_account:'salary_0826',scheduled_date:'2026-11-15'}),
+ scope:{action:'transfer',account:'salary_0826',payee:'mom'},scheduledAt:'2026-11-15T09:00:00+08:00',...extra});
 const errorCode=code=>error=>error instanceof SafetyError&&error.code===code;
 const consent=(s,op,options={})=>authorizeSafety(s,op,{source:USER,now:NOW,...options});
 const permit=(s,op,grant,executionId='execution-one',options={})=>acquireExecution(s,op,{grantId:grant.id,executionId,now:NOW,...options});
@@ -91,9 +91,9 @@ test('the 1000 yuan threshold and same-date transfer history classify independen
  const s=state();
  assert.equal(classifyOperation(s,operation({amountMinor:100000}),{now:NOW}).level,'green');
  assert.equal(classifyOperation(s,operation({amountMinor:100001}),{now:NOW}).level,'red');
- s.ledger=[{kind:'transfer',date:'2026-11-02',direction:'expense',amountMinor:50000},
+ s.ledger=[{kind:'transfer',date:'2026-11-15',direction:'expense',amountMinor:50000},
   {kind:'transfer',date:'2026-11-01',direction:'expense',amountMinor:900000},
-  {kind:'investment',date:'2026-11-02',direction:'expense',amountMinor:900000}];
+  {kind:'investment',date:'2026-11-15',direction:'expense',amountMinor:900000}];
  assert.equal(classifyOperation(s,operation(),{now:NOW}).cumulativeMinor,100000);
  assert.equal(classifyOperation(s,operation({amountMinor:50001}),{now:NOW}).level,'red');
  for(const kind of ['investment','card','card_unlock','password_change','paper_buy','paper_sell'])assert.equal(classifyOperation(s,operation({kind,amountMinor:1}),{now:NOW}).level,'red');
@@ -145,7 +145,7 @@ test('grants bind every operation field and freeze the complete displayed snapsh
  assert.equal(Object.isFrozen(grant.snapshot),true);assert.equal(Object.isFrozen(grant.snapshot.scope),true);
  assert.throws(()=>{grant.snapshot.scope.account='other';},TypeError);
  const changes=[{revision:2},{target:'爸爸 4382'},{amountMinor:50001},{currency:'USD'},{parameters:'changed-parameters'},
-  {scope:{action:'transfer',account:'living_1608',payee:'mom'}},{scheduledAt:'2026-11-03T09:00:00+08:00'},{riskFlags:['voice_mismatch']}];
+  {scope:{action:'transfer',account:'living_1608',payee:'mom'}},{scheduledAt:'2026-11-16T09:00:00+08:00'},{riskFlags:['voice_mismatch']}];
  for(const change of changes)assert.throws(()=>validateGrant(s,{...op,...change},{grantId:grant.id,now:NOW+1}),errorCode('stale_binding'));
  assert.equal(validateGrant(s,op,{grantId:grant.id,now:NOW+1}).id,grant.id);
  assert.equal(getSafetyGrant(s,grant.id).snapshot.target,'妈妈 6821');
@@ -177,7 +177,7 @@ test('red writes need an independent code challenge; a plain verified boolean do
 });
 
 test('a verified future scheduled grant survives challenge expiry but not the displayed consent expiry',()=>{
- const s=state(),op=operation({id:'birthday-transfer',amountMinor:152000,scheduledAt:'2026-11-09T13:14:00+08:00'});
+ const s=state(),op=operation({id:'birthday-transfer',amountMinor:152000,scheduledAt:'2026-11-18T13:14:00+08:00'});
  const {grant,challenge}=verifiedGrant(s,op,{ttlMs:8*86400000});
  assert.equal(validateGrant(s,op,{grantId:grant.id,now:NOW+2}).status,'ready');
  assert.throws(()=>permit(s,op,grant,'too-early',{now:NOW+2}),errorCode('not_due'));

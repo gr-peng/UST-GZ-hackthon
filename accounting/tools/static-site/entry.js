@@ -1,0 +1,3 @@
+const previewURL=new URL(location.href);previewURL.searchParams.set('offline','1');previewURL.searchParams.set('app','1');previewURL.searchParams.delete('online_session');let previewId=sessionStorage.getItem('finpilot-preview-tab');if(!previewId){previewId='preview-'+crypto.randomUUID().replaceAll('-','').slice(0,20);sessionStorage.setItem('finpilot-preview-tab',previewId);}previewURL.searchParams.set('session',previewId);history.replaceState(null,'',previewURL);
+
+document.documentElement.dataset.offline='true';

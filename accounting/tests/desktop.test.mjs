@@ -12,24 +12,24 @@ function redirect(href,{wide=true,embedded=false}={}){
  return hits;
 }
 test('desktop entry preserves session, material flags, extra query and route',()=>{
- const result=new URL(redirect('http://127.0.0.1:65281/?session=judge-2&material=off&material-audit=1&extra=a%2Bb#/investment')[0]);
- assert.equal(result.pathname,'/showcase.html');assert.equal(result.searchParams.get('session'),'judge-2');
+ const result=new URL(redirect('http://127.0.0.1:65281/?session=sample-2&material=off&material-audit=1&extra=a%2Bb#/investment')[0]);
+ assert.equal(result.pathname,'/showcase.html');assert.equal(result.searchParams.get('session'),'sample-2');
  assert.equal(result.searchParams.get('material'),'off');assert.equal(result.searchParams.get('material-audit'),'1');
  assert.equal(result.searchParams.get('extra'),'a+b');assert.equal(result.hash,'#/investment');
 });
 test('iframe, app flag and mobile never enter a showcase redirect loop',()=>{
- const href='http://127.0.0.1:65281/?session=judge#/bot';
+ const href='http://127.0.0.1:65281/?session=sample#/bot';
  assert.deepEqual(redirect(href,{embedded:true}),[]);assert.deepEqual(redirect(href,{wide:false}),[]);
  assert.deepEqual(redirect(href.replace('?','?app=1&')),[]);
- const embedded=appURL('http://127.0.0.1:65281/showcase.html?session=judge&material=off#/finance');
- assert.equal(embedded.searchParams.get('app'),'1');assert.equal(embedded.searchParams.get('session'),'judge');
+ const embedded=appURL('http://127.0.0.1:65281/showcase.html?session=sample&material=off#/finance');
+ assert.equal(embedded.searchParams.get('app'),'1');assert.equal(embedded.searchParams.get('session'),'sample');
  assert.equal(embedded.searchParams.get('material'),'off');assert.equal(embedded.hash,'#/finance');
  assert.deepEqual(redirect(embedded.href),[]);
 });
 test('showcase default and navigation URLs keep the intended demo namespace',()=>{
  assert.equal(appURL('http://127.0.0.1:65281/showcase.html').searchParams.get('session'),'demo');
- const url=appURL('http://127.0.0.1:65281/showcase.html?session=A%2Fjudge&material-fail=webgl#/bot','/today');
- assert.equal(url.searchParams.get('session'),'A/judge');assert.equal(appStateKey('A/judge'),'finpilot-companion-v1-Ajudge');
+ const url=appURL('http://127.0.0.1:65281/showcase.html?session=A%2Fsample&material-fail=webgl#/bot','/today');
+ assert.equal(url.searchParams.get('session'),'A/sample');assert.equal(appStateKey('A/sample'),'finpilot-companion-20261115-Asample');
  assert.equal(url.searchParams.get('material-fail'),'webgl');assert.equal(url.hash,'#/today');
 });
 test('reset clears current R8/native/history keys but preserves other sessions and connections',()=>{

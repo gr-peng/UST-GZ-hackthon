@@ -11,7 +11,8 @@ ROOT = Path(__file__).resolve().parents[1]
 def candidates():
     result = subprocess.run(['git', 'ls-files', '--cached', '--others', '--exclude-standard', '-z'],
                             cwd=ROOT, check=True, capture_output=True)
-    return sorted(set(result.stdout.decode('utf-8').split('\0')) - {''})
+    return sorted(name for name in set(result.stdout.decode('utf-8').split('\0')) - {''}
+                  if (ROOT / name).is_file())
 
 
 def main():

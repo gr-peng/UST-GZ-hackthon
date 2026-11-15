@@ -1,19 +1,20 @@
 // One local financial source. All amounts are integer fen; no bank connector.
 import {HISTORY_ROWS,HISTORY_VERSION} from './history-ledger.mjs';
 import {MAX_AMOUNT_MINOR} from './limits.mjs';
-export const STORY_DATE='2026-11-02';
+import {STORY_DATE} from './demo-calendar.mjs';
+export {STORY_DATE} from './demo-calendar.mjs';
 export const FINANCE_SCHEMA=2;
 const seed=[
- ['salary','2026-11-02','工资入账','工资',1580000,'income','wallet'],
- ['refund','2026-11-02','购物退款','退款',35660,'income','wallet'],
- ['breakfast','2026-11-02','早餐与咖啡','餐饮',3200,'expense','receipt'],
+ ['salary',STORY_DATE,'工资入账','工资',1580000,'income','wallet'],
+ ['refund',STORY_DATE,'购物退款','退款',35660,'income','wallet'],
+ ['breakfast',STORY_DATE,'早餐与咖啡','餐饮',3200,'expense','receipt'],
  ['rent','2026-11-01','住房租金','住房',350000,'expense','home'],
  ['subscription','2026-11-01','视频会员','订阅',6800,'expense','card'],
- ['transport','2026-11-02','地铁与打车','出行',16466,'expense','plane'],
- ['lunch','2026-11-02','工作日午餐','餐饮',3791,'expense','receipt'],
- ['dinner','2026-11-02','家庭聚餐','餐饮',180309,'expense','receipt'],
- ['shopping','2026-11-02','生活用品','购物',159962,'expense','wallet'],
- ['utilities','2026-11-02','水电与日用品','其他',28183,'expense','home']
+ ['transport',STORY_DATE,'地铁与打车','出行',16466,'expense','plane'],
+ ['lunch',STORY_DATE,'午餐','餐饮',3791,'expense','receipt'],
+ ['dinner',STORY_DATE,'家庭聚餐','餐饮',180309,'expense','receipt'],
+ ['shopping',STORY_DATE,'生活用品','购物',159962,'expense','wallet'],
+ ['utilities',STORY_DATE,'水电与日用品','其他',28183,'expense','home']
 ];
 export const seedLedger=()=>seed.map(([id,date,title,category,amountMinor,direction,icon],i)=>({id:'seed:'+id,date,title,category,amountMinor,direction,icon,movement:'cashflow',order:i,taskId:null,receipt:null}));
 const cashDelta=r=>r.movement==='internal_transfer'?0:(r.direction==='income'?1:-1)*r.amountMinor;

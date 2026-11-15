@@ -6,7 +6,7 @@ import {
  ensureSafety,lockSafety,invalidateSafetyEpoch,beginRecovery,recoverSafety,DEMO_VERIFICATION_CODE
 } from '../web/safety-policy.mjs';
 
-const NOW=Date.parse('2026-11-02T01:00:00.000Z');
+const NOW=Date.parse('2026-11-15T01:00:00.000Z');
 const USER={kind:'user',method:'click'};
 const errorCode=code=>error=>error?.code===code;
 const uncertainWrite=code=>error=>error?.code===code&&error.outcomeUnknown===true;

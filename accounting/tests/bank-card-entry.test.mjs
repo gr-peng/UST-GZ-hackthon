@@ -5,7 +5,7 @@ import {createBankCards} from '../web/bank-cards.mjs';
 
 function fixture(state=fresh()) {
  let saves=0;
- const ui=createBankCards({getState:()=>state,save:()=>saves++,esc:String,money:n=>String(n),icon:()=>'',onLedger(){}});
+ const ui=createBankCards({features:{cardApplications:true,creditLimitAdjustment:true},getState:()=>state,save:()=>saves++,esc:String,money:n=>String(n),icon:()=>'',onLedger(){}});
  return {state,ui,saves:()=>saves};
 }
 function withDocument(fn) {

@@ -5,7 +5,7 @@ import {financialFacts,ensureFinance} from '../web/finance-state.mjs';
 import {createCaptureStore} from '../web/capture-store.mjs';
 import {createCaptureFlow,captureFields} from '../web/baseline/capture-flow.js';
 const setup=()=>{const state=fresh();ensureFinance(state);let persisted,saves=0;return {state,get persisted(){return persisted},get saves(){return saves},request:createCaptureStore({getState:()=>state,save:()=>{saves++;persisted=JSON.parse(JSON.stringify(state));}})}};
-const bill={event_date:'2026-11-02',amount:'28.45',type:'expense',category:'餐饮',description:'录入测试午餐',movement:'cashflow'};
+const bill={event_date:'2026-11-15',amount:'28.45',type:'expense',category:'餐饮',description:'录入测试午餐',movement:'cashflow'};
 const create=(r,id='manual-test',value=bill)=>r('/capture/manual',{method:'POST',body:{request_id:id,bill:value}});
 const confirm=(r,b)=>r('/capture/'+b.id+'/confirm',{method:'POST',body:{challenge:b.challenge,rows:b.rows.map(captureFields)}});
 
@@ -126,12 +126,12 @@ test('edit invalidates old confirmation; duplicates need keep/skip; discarded an
 });
 test('original flow imports UTF8 CSV and keeps internal/principal/refund accounting distinct',async()=>{
  const x=setup(),before=financialFacts(x.state);
- const csv='日期,收支,金额,分类,备注,资金性质\n2026-11-02,支出,20,其他,"测试,双引号""备注",internal_transfer\n2026-11-02,支出,100,理财本金,本金记录,principal\n2026-11-02,收入,5,退款,退款记录,cashflow';
+ const csv='日期,收支,金额,分类,备注,资金性质\n2026-11-15,支出,20,其他,"测试,双引号""备注",internal_transfer\n2026-11-15,支出,100,理财本金,本金记录,principal\n2026-11-15,收入,5,退款,退款记录,cashflow';
  const content=Buffer.from(csv).toString('base64');
  const b=await x.request('/capture/csv',{method:'POST',body:{request_id:'csv1',content}});
  assert.equal(b.rows[0].description,'测试,双引号"备注');await confirm(x.request,b);
  assert.equal(x.state.balance,49905);assert.equal(x.state.invested,100);
  const f=financialFacts(x.state);assert.equal(f.expenseMinor,before.expenseMinor);assert.equal(f.refundMinor,before.refundMinor+500);
  const store={get:()=>({}),set:()=>{}};const flow=createCaptureFlow({request:x.request,store});
- await flow.text('午餐32元','2026-11-02');await flow.confirm();assert.equal(x.state.balance,49873);
+ await flow.text('午餐32元','2026-11-15');await flow.confirm();assert.equal(x.state.balance,49873);
 });

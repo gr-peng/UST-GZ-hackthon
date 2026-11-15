@@ -5,8 +5,8 @@ import {financialFacts} from '../web/finance-state.mjs';
 import {ensureSafety,authorizeSafety,acquireExecution,lockSafety,invalidateSafetyEpoch} from '../web/safety-policy.mjs';
 import {previousMonthSpending,startSavingsCoach,reviseSavingsProposal,cancelSavingsCoach,budgetOperation,applyBudgetTransfer,updateSavingsFields,savingsPlanOperation,applySavingsPlan,beginSavingsAdjustment,pauseSavingsPlan,tickSavingsPlan,savingsModelContext,savingsSummary,renderSavingsCoach,renderSavingsAdjustment,renderSavingsJar} from '../web/savings-coach.mjs';
 
-const NOW=Date.parse('2026-11-02T01:00:00Z'),USER={kind:'user',method:'click'};
-const FIELDS={daily_minor:2000,source_account:'living_1608',start_date:'2026-11-03',target_minor:1200000};
+const NOW=Date.parse('2026-11-15T01:00:00Z'),USER={kind:'user',method:'click'};
+const FIELDS={daily_minor:2000,source_account:'living_1608',start_date:'2026-11-16',target_minor:1200000};
 function state(){const s=fresh();ensureSafety(s);return s;}
 function permit(s,op,now=NOW){const g=authorizeSafety(s,op,{source:USER,now});assert.equal(g.status,'ready');return acquireExecution(s,op,{grantId:g.grantId,executionId:op.id+':'+op.revision,now});}
 function budgetDone(s){startSavingsCoach(s,{id:'test-saving',now:NOW});const op=budgetOperation(s);return applyBudgetTransfer(s,s.savingsCoach,{permit:permit(s,op),now:NOW});}
@@ -72,7 +72,7 @@ test('no financial write accepts a forged or absent permit, and a late permit is
 test('plan requires each daily amount, source, date and target, retaining already filled answers',()=>{
  const s=state();budgetDone(s);s.savingsCoach={...s.savingsCoach,stage:'details',fields:{}};s.savingsCoach=updateSavingsFields(s.savingsCoach,{daily_minor:2000});
  assert.equal(s.savingsCoach.stage,'details');assert.equal(s.savingsCoach.fields.daily_minor,2000);assert.throws(()=>savingsPlanOperation(s,s.savingsCoach,{now:NOW}),/补齐/);
- s.savingsCoach=updateSavingsFields(s.savingsCoach,{source_account:'salary_0826',start_date:'2026-11-03'});
+ s.savingsCoach=updateSavingsFields(s.savingsCoach,{source_account:'salary_0826',start_date:'2026-11-16'});
  assert.equal(s.savingsCoach.stage,'details');s.savingsCoach=updateSavingsFields(s.savingsCoach,{target_minor:1200000});assert.equal(s.savingsCoach.stage,'confirm');
  assert.equal(s.savingsJar,undefined);assert.match(renderSavingsCoach(s),/本期30天/);
  const context=savingsModelContext(s);assert.equal(context.fields.daily_minor,2000);assert.equal(context.draft_id,s.savingsCoach.id);assert.ok(!JSON.stringify(context).includes('ledger'));
@@ -101,44 +101,44 @@ test('a changed plan parameter invalidates the old one-time confirmation',()=>{
 
 test('a due day debits available cash once, records savings principal, and keeps expense totals unchanged',()=>{
  const s=state(),beforeCash=s.balance,before=financialFacts(s,'2026-11').expenseMinor;planDone(s);
- assert.equal(tickSavingsPlan(s,{now:NOW}).executed,false);const result=tickSavingsPlan(s,{now:t('2026-11-03')});
+ assert.equal(tickSavingsPlan(s,{now:NOW}).executed,false);const result=tickSavingsPlan(s,{now:t('2026-11-16')});
  assert.equal(result.executed,true);assert.equal(s.savingsJar.saved_minor,2000);assert.equal(s.balance,beforeCash-20);assert.equal(financialFacts(s,'2026-11').expenseMinor,before);
- assert.equal(tickSavingsPlan(s,{now:t('2026-11-03')+1000}).executed,false);assert.equal(s.balance,beforeCash-20);assert.match(renderSavingsJar(s),/¥20\.00/);
+ assert.equal(tickSavingsPlan(s,{now:t('2026-11-16')+1000}).executed,false);assert.equal(s.balance,beforeCash-20);assert.match(renderSavingsJar(s),/¥20\.00/);
 });
 
 test('offline days are not replayed or backfilled on the next tick',()=>{
- const s=state();planDone(s);const result=tickSavingsPlan(s,{now:t('2026-11-07')});assert.equal(result.executed,true);assert.equal(s.savingsJar.saved_minor,2000);assert.deepEqual(Object.keys(s.savingsJar.deposits),['2026-11-07']);
+ const s=state();planDone(s);const result=tickSavingsPlan(s,{now:t('2026-11-21')});assert.equal(result.executed,true);assert.equal(s.savingsJar.saved_minor,2000);assert.deepEqual(Object.keys(s.savingsJar.deposits),['2026-11-21']);
 });
 
 test('the reviewed thirty-day window expires without silently renewing or depositing',()=>{
- const s=state();planDone(s);assert.equal(tickSavingsPlan(s,{now:t('2026-12-03')}).status,'needs_review');assert.equal(s.savingsJar.saved_minor,0);
+ const s=state();planDone(s);assert.equal(tickSavingsPlan(s,{now:t('2026-12-16')}).status,'needs_review');assert.equal(s.savingsJar.saved_minor,0);
 });
 
 test('pause and restore require review, while safe read-only cards remain available',()=>{
- const s=state();planDone(s);pauseSavingsPlan(s,{source:USER});assert.equal(tickSavingsPlan(s,{now:t('2026-11-03')}).executed,false);assert.match(renderSavingsJar(s),/核对后继续/);
- beginSavingsAdjustment(s,{now:t('2026-11-03'),resume:true});assert.equal(s.savingsCoach.stage,'confirm');assert.equal(s.savingsJar.status,'paused');
- const op=savingsPlanOperation(s,s.savingsCoach,{now:t('2026-11-03')});applySavingsPlan(s,s.savingsCoach,{permit:permit(s,op,t('2026-11-03')),now:t('2026-11-03')});
- assert.equal(tickSavingsPlan(s,{now:t('2026-11-03')}).executed,false);assert.equal(tickSavingsPlan(s,{now:t('2026-11-04')}).executed,true);
+ const s=state();planDone(s);pauseSavingsPlan(s,{source:USER});assert.equal(tickSavingsPlan(s,{now:t('2026-11-16')}).executed,false);assert.match(renderSavingsJar(s),/核对后继续/);
+ beginSavingsAdjustment(s,{now:t('2026-11-16'),resume:true});assert.equal(s.savingsCoach.stage,'confirm');assert.equal(s.savingsJar.status,'paused');
+ const op=savingsPlanOperation(s,s.savingsCoach,{now:t('2026-11-16')});applySavingsPlan(s,s.savingsCoach,{permit:permit(s,op,t('2026-11-16')),now:t('2026-11-16')});
+ assert.equal(tickSavingsPlan(s,{now:t('2026-11-16')}).executed,false);assert.equal(tickSavingsPlan(s,{now:t('2026-11-17')}).executed,true);
 });
 
 test('safety lock and epoch reset stop future writes, and clearing only a flag does not reactivate the plan',()=>{
- const s=state();planDone(s);lockSafety(s,'manual_lock',{now:NOW+1});assert.equal(tickSavingsPlan(s,{now:t('2026-11-03')}).status,'paused_safety');s.safety.locked=false;s.safety.lock=null;assert.equal(tickSavingsPlan(s,{now:t('2026-11-04')}).executed,false);assert.equal(s.savingsJar.saved_minor,0);
- const s2=state();planDone(s2);invalidateSafetyEpoch(s2,'demo_reset',{now:NOW+1});assert.equal(tickSavingsPlan(s2,{now:t('2026-11-03')}).status,'paused_safety');
+ const s=state();planDone(s);lockSafety(s,'manual_lock',{now:NOW+1});assert.equal(tickSavingsPlan(s,{now:t('2026-11-16')}).status,'paused_safety');s.safety.locked=false;s.safety.lock=null;assert.equal(tickSavingsPlan(s,{now:t('2026-11-17')}).executed,false);assert.equal(s.savingsJar.saved_minor,0);
+ const s2=state();planDone(s2);invalidateSafetyEpoch(s2,'demo_reset',{now:NOW+1});assert.equal(tickSavingsPlan(s2,{now:t('2026-11-16')}).status,'paused_safety');
 });
 
 test('tampered saved progress, terms and completion proofs cannot produce a deposit',()=>{
  for(const change of [s=>s.savingsJar.daily_minor=9000,s=>s.savingsJar.saved_minor=1,s=>s.safety.executions[s.savingsJar.authority.execution_id].status='pending']){
-  const s=state();planDone(s);change(s);const count=s.ledger.length;assert.throws(()=>tickSavingsPlan(s,{now:t('2026-11-03')}));assert.equal(s.ledger.length,count);
+  const s=state();planDone(s);change(s);const count=s.ledger.length;assert.throws(()=>tickSavingsPlan(s,{now:t('2026-11-16')}));assert.equal(s.ledger.length,count);
  }
 });
 
 test('a funded jar can be adjusted without losing past deposits or depositing twice on the same day',()=>{
- const s=state();planDone(s);tickSavingsPlan(s,{now:t('2026-11-03')});const jarId=s.savingsJar.id;beginSavingsAdjustment(s,{now:t('2026-11-03')});s.savingsCoach=updateSavingsFields(s.savingsCoach,{daily_minor:3000});const op=savingsPlanOperation(s,s.savingsCoach,{now:t('2026-11-03')});applySavingsPlan(s,s.savingsCoach,{permit:permit(s,op,t('2026-11-03')),now:t('2026-11-03')});
- assert.equal(s.savingsJar.id,jarId);assert.equal(s.savingsJar.saved_minor,2000);assert.equal(tickSavingsPlan(s,{now:t('2026-11-03')}).executed,false);assert.equal(tickSavingsPlan(s,{now:t('2026-11-04')}).executed,true);assert.equal(s.savingsJar.saved_minor,5000);
+ const s=state();planDone(s);tickSavingsPlan(s,{now:t('2026-11-16')});const jarId=s.savingsJar.id;beginSavingsAdjustment(s,{now:t('2026-11-16')});s.savingsCoach=updateSavingsFields(s.savingsCoach,{daily_minor:3000});const op=savingsPlanOperation(s,s.savingsCoach,{now:t('2026-11-16')});applySavingsPlan(s,s.savingsCoach,{permit:permit(s,op,t('2026-11-16')),now:t('2026-11-16')});
+ assert.equal(s.savingsJar.id,jarId);assert.equal(s.savingsJar.saved_minor,2000);assert.equal(tickSavingsPlan(s,{now:t('2026-11-16')}).executed,false);assert.equal(tickSavingsPlan(s,{now:t('2026-11-17')}).executed,true);assert.equal(s.savingsJar.saved_minor,5000);
 });
 
 test('the last deposit is capped at the actual target instead of exceeding it',()=>{
- const s=state();planDone(s,{...FIELDS,target_minor:2500});tickSavingsPlan(s,{now:t('2026-11-03')});const r=tickSavingsPlan(s,{now:t('2026-11-04')});assert.equal(r.receipt.amount_minor,500);assert.equal(s.savingsJar.saved_minor,2500);assert.equal(s.savingsJar.status,'completed');
+ const s=state();planDone(s,{...FIELDS,target_minor:2500});tickSavingsPlan(s,{now:t('2026-11-16')});const r=tickSavingsPlan(s,{now:t('2026-11-17')});assert.equal(r.receipt.amount_minor,500);assert.equal(s.savingsJar.saved_minor,2500);assert.equal(s.savingsJar.status,'completed');
 });
 
 test('form actions remain explicit, concise, and safe to render at narrow widths',()=>{
