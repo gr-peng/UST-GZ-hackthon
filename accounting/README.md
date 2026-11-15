@@ -1,4 +1,4 @@
-<table><tr><td width="23%" align="center"><img src="web/assets/dot.png" width="180" alt="FinPilot 伙伴"></td><td width="77%"><img src="docs/assets/brand-title.svg" width="100%" alt="FinPilot：钱的事，我陪你。安全智能的个人财务伙伴"></td></tr></table>
+<table><tr><td width="23%" align="center"><img src="web/assets/dot.png" width="180" alt="FinPilot 伙伴"></td><td width="77%"><img src="../docs/assets/brand-title.svg" width="100%" alt="FinPilot：钱的事，我陪你。安全智能的个人财务伙伴"></td></tr></table>
 
 <p align="center">
   <img src="https://img.shields.io/badge/Python-3.12%2B-3776AB?style=flat&logo=python&logoColor=white" alt="Python">
@@ -8,7 +8,7 @@
   <img src="https://img.shields.io/badge/Web_Audio-Streaming-227A52?style=flat" alt="Web Audio">
 </p>
 
-![FinPilot 桌面演示页](docs/screenshots/showcase.jpg)
+![FinPilot 桌面演示页](../docs/screenshots/showcase.jpg)
 
 
 ## 打开离线演示
@@ -26,16 +26,16 @@
 
 <table>
   <tr>
-    <td align="center"><img src="docs/screenshots/today.jpg" width="200" alt="今天"><br>今天：工资到账</td>
-    <td align="center"><img src="docs/screenshots/permission.png" width="200" alt="授权"><br>Bot：按任务授权</td>
-    <td align="center"><img src="docs/screenshots/finance.png" width="200" alt="财务"><br>财务：分类图表</td>
-    <td align="center"><img src="docs/screenshots/research.png" width="200" alt="研究"><br>投资：个股研究</td>
+    <td align="center"><img src="../docs/screenshots/today.jpg" width="200" alt="今天"><br>今天：工资到账</td>
+    <td align="center"><img src="../docs/screenshots/permission.png" width="200" alt="授权"><br>Bot：按任务授权</td>
+    <td align="center"><img src="../docs/screenshots/finance.png" width="200" alt="财务"><br>财务：分类图表</td>
+    <td align="center"><img src="../docs/screenshots/research.png" width="200" alt="研究"><br>投资：个股研究</td>
   </tr>
 </table>
 
 ## 在线使用与开发
 
-静态托管与导出见 [在线体验说明](docs/HOSTED-DEMO.md)。启动和模型连接见 [运行指南](RUNNING.md)。支持 Micu 与 MiniMax 官方对话，模型名可编辑；MiniMax 语音独立连接。凭据只留在服务内存，由用户自行填写。
+在线演示可通过上方入口打开。启动和模型连接见 [运行指南](RUNNING.md)。支持 Micu 与 MiniMax 官方对话，模型名可编辑；MiniMax 语音独立连接。凭据只留在服务内存，由用户自行填写。
 
 ```text
 backend/          对话协议、提供方连接、会话与后端适配
