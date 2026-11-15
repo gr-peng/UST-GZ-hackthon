@@ -1,0 +1,5 @@
+# Preserve the verified source/reference byte hashes across clone platforms.
+* -text
+*.png binary
+*.jpg binary
+*.pdf binary
